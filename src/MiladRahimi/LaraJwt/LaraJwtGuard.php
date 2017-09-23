@@ -167,7 +167,7 @@ class LaraJwtGuard implements Guard
     public function user()
     {
         if ($this->user) {
-            return $this->user();
+            return $this->user;
         }
 
         if ($this->check()) {
