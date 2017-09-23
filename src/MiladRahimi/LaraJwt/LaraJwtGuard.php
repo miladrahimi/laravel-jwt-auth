@@ -160,20 +160,9 @@ class LaraJwtGuard implements Guard
     }
 
     /**
-     * Set the current user.
-     *
-     * @param  \Illuminate\Contracts\Auth\Authenticatable $user
-     * @return void
-     */
-    public function setUser(Authenticatable $user)
-    {
-        $this->user = $user;
-    }
-
-    /**
      * Get the currently authenticated user.
      *
-     * @return \Illuminate\Contracts\Auth\Authenticatable|null
+     * @return Authenticatable|null
      */
     public function user()
     {
@@ -187,7 +176,7 @@ class LaraJwtGuard implements Guard
     /**
      * Set the current request instance.
      *
-     * @param \Illuminate\Http\Request $request
+     * @param Request $request
      *
      * @return $this
      */
@@ -196,5 +185,49 @@ class LaraJwtGuard implements Guard
         $this->request = $request;
 
         return $this;
+    }
+
+    /**
+     * Get the user provider used by the guard.
+     *
+     * @return UserProvider
+     */
+    public function getProvider()
+    {
+        return $this->provider;
+    }
+
+    /**
+     * Set the user provider used by the guard.
+     *
+     * @param UserProvider $provider
+     *
+     * @return $this
+     */
+    public function setProvider(UserProvider $provider)
+    {
+        $this->provider = $provider;
+        return $this;
+    }
+
+    /**
+     * Return the currently cached user.
+     *
+     * @return Authenticatable|null
+     */
+    public function getUser()
+    {
+        return $this->user;
+    }
+
+    /**
+     * Set the current user.
+     *
+     * @param  Authenticatable $user
+     * @return void
+     */
+    public function setUser(Authenticatable $user)
+    {
+        $this->user = $user;
     }
 }
