@@ -71,7 +71,7 @@ class LaraJwtGuard implements Guard
      */
     public function guest()
     {
-        return (is_null($this->token) || empty($this->token->sub));
+        return is_null($this->user) && (is_null($this->token) || empty($this->token->sub));
     }
 
     /**
@@ -99,7 +99,7 @@ class LaraJwtGuard implements Guard
      */
     public function check()
     {
-        return ($this->token && $this->token->sub);
+        return $this->user || ($this->token && $this->token->sub);
     }
 
     /**
@@ -166,6 +166,10 @@ class LaraJwtGuard implements Guard
      */
     public function user()
     {
+        if ($this->user) {
+            return $this->user();
+        }
+
         if ($this->check()) {
             return $this->user = $this->provider->retrieveById($this->token->sub);
         }
@@ -217,7 +221,7 @@ class LaraJwtGuard implements Guard
      */
     public function getUser()
     {
-        return $this->user;
+        return $this->user();
     }
 
     /**
