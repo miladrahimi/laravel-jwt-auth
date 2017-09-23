@@ -183,4 +183,18 @@ class LaraJwtGuard implements Guard
 
         return null;
     }
+
+    /**
+     * Set the current request instance.
+     *
+     * @param \Illuminate\Http\Request $request
+     *
+     * @return $this
+     */
+    public function setRequest(Request $request)
+    {
+        $this->request = $request;
+
+        return $this;
+    }
 }
