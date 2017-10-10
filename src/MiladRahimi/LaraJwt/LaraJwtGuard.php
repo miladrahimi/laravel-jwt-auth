@@ -8,6 +8,7 @@
 
 namespace MiladRahimi\LaraJwt;
 
+use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
@@ -18,6 +19,8 @@ use MiladRahimi\LaraJwt\Values\Token;
 
 class LaraJwtGuard implements Guard
 {
+    use GuardHelpers;
+
     /** @var UserProvider $provider */
     protected $provider;
 
