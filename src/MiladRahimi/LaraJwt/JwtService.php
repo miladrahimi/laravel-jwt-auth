@@ -15,6 +15,7 @@ use Lcobucci\JWT\Signer\Hmac\Sha512;
 use Lcobucci\JWT\ValidationData;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 use MiladRahimi\LaraJwt\Values\Token;
+use OutOfBoundsException;
 
 class JwtService
 {
@@ -23,6 +24,7 @@ class JwtService
      *
      * @param \MiladRahimi\LaraJwt\Values\Token $token
      * @param string $key
+     *
      * @return string
      */
     public static function generate(Token $token, string $key): string
@@ -48,6 +50,7 @@ class JwtService
      * @param string $jwt
      * @param string $key
      * @param ValidationData|null $validationData
+     *
      * @return Token
      * @throws InvalidJwtException
      */
@@ -70,14 +73,18 @@ class JwtService
             throw new InvalidJwtException('', 0, $e);
         }
 
-        $token = new Token();
-        $token->iss = $data->getClaim('iss');
-        $token->sub = $data->getClaim('sub');
-        $token->aud = $data->getClaim('aud');
-        $token->iat = $data->getClaim('iat');
-        $token->nbf = $data->getClaim('nbf');
-        $token->exp = $data->getClaim('exp');
-        $token->jti = $data->getClaim('jti');
+        try {
+            $token      = new Token();
+            $token->iss = $data->getClaim('iss');
+            $token->sub = $data->getClaim('sub');
+            $token->aud = $data->getClaim('aud');
+            $token->iat = $data->getClaim('iat');
+            $token->nbf = $data->getClaim('nbf');
+            $token->exp = $data->getClaim('exp');
+            $token->jti = $data->getClaim('jti');
+        } catch (OutOfBoundsException $e) {
+            throw new InvalidJwtException($e->getMessage(), 0, $e);
+        }
 
         return $token;
     }
