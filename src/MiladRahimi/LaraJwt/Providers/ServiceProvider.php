@@ -6,11 +6,16 @@
  * Time: 13:48
  */
 
-namespace MiladRahimi\LaraJwt;
+namespace MiladRahimi\LaraJwt\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\ServiceProvider as Provider;
+use MiladRahimi\LaraJwt\Guards\Jwt as JwtGuard;
+use MiladRahimi\LaraJwt\Services\JwtAuth;
+use MiladRahimi\LaraJwt\Services\JwtAuthInterface;
+use MiladRahimi\LaraJwt\Services\JwtService;
+use MiladRahimi\LaraJwt\Services\JwtServiceInterface;
 
-class LaraJwtServiceProvider extends ServiceProvider
+class ServiceProvider extends Provider
 {
     /**
      * Register
@@ -19,7 +24,8 @@ class LaraJwtServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->app->singleton(JwtServiceInterface::class, JwtService::class);
+        $this->app->singleton(JwtAuthInterface::class, JwtAuth::class);
     }
 
     /**
@@ -31,7 +37,8 @@ class LaraJwtServiceProvider extends ServiceProvider
     {
         // Extend laravel auth to inject jwt guard
         $this->app['auth']->extend('jwt', function ($app, $name, array $config) {
-            $guard = new LaraJwtGuard(
+
+            $guard = new JwtGuard(
                 $app['auth']->createUserProvider($config['provider']),
                 $app['request']
             );
@@ -43,7 +50,7 @@ class LaraJwtServiceProvider extends ServiceProvider
 
         // Install config on vendor:publish
         $this->publishes([
-            __DIR__ . '/../../../config/jwt.php' => config_path('jwt.php'),
-        ]);
+            __DIR__ . '/../../../config/jwt.php' => config_path('jwt.php')
+        ], 'larajwt-config');
     }
 }

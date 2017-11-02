@@ -1,35 +1,37 @@
 # LaraJwt
-JWT authentication tools and guard for Laravel projects
+Laravel JWT guard and authentication tools
 
 ## Documentation
 
 ### Overview
 
-LaraJwt is a simple laravel package to generate jwt and providing jwt guard for authentication.
+LaraJwt is a Laravel package for
+generating JWT (JSON Web-based Token) from users
+and providing JWT guard for Laravel applications.
 
 ### Installation
 
-Run following command in your laravel root directory:
+Run the following command in your Laravel project root directory:
 
 ```
-composer require miladrahimi/larajwt:1.*
+composer require miladrahimi/larajwt:2.*
 ```
 
-After installation add LaraJwt service provider to the providers in `config/app.php`:
+Now run the following command to copy `jwt.php` to your Laravel config directory:
 
 ```
-MiladRahimi\LaraJwt\LaraJwtServiceProvider::class
+php artisan vendor:publish --tag=larajwt-config
 ```
 
-Then run following command to add `jwt.php` (LaraJwt config) to your project configs:
+#### Notes on Installation
 
-```
-php artisan vendor:publish
-```
+* The package service provider will be automatically discovered by Laravel package discovery.
+
+* The `JwtAuth` alias for `MiladRahimi\LaraJwt\Facades\JwtAuth` will be automatically registered.
 
 ### Configuration
 
-Add JWT guard in your `config/auth.php`:
+Add JWT guard in your `config/auth.php` like the example.
 
 ```
 'guards' => [
@@ -45,21 +47,19 @@ Add JWT guard in your `config/auth.php`:
 ],
 ```
 
-Open `config/jwt.php` and edit it based on your requirements.
+You may edit `config/jwt.php` based on your your requirements.
 
-### Generate JWT
+### Generate JWT from Users
 
-Use following method to generate jwt from user model:
+Use the following method to generate jwt from user model:
 
 ```
-use MiladRahimi\LaraJwt\JwtAuth;
-
 $jwt = JwtAuth::generateToken($user);
 ```
 
-### User Authentication
+You may pass any authenticable entity to this method.
 
-You may authenticate users in the sign in process like this:
+For example you may generate a jwt from user in sign in process like this:
 
 ```
 $credential = [
@@ -71,29 +71,22 @@ if(Auth::guard('api')->attempt($credential)) {
     $user = Auth::guard('api')->user();
     $jwt = JwtAuth::generateToken($user);
     
-    // Return successfull sign in response and the generate jwt.
+    // Return successfull sign in response with the generated jwt.
 } else {
-    // Return failed sign in attempt...
+    // Return response for failed attempt...
 }
 ```
 
 ### User Validation
 
-You clients must add `Authorization: Bearer <jwt>` to the header of their requests.
+Your clients must add `Authorization: Bearer <jwt>` to the header of their requests.
 
-Add `auth:api` (based on your `config/auth.php`) middleware to your authenticated routes.
-
-You can retrieve current user in your application this way:
+For example if you have considered JWT guard for your APIs (in `config/auth.php`),
+you can `auth:api` middleware to your authenticated API routes.
+and to retrieve current user in your application you can use following code:
 
 ```
 $currentUser = Auth::guard('api')->user();
-```
-
-or if your are in a controller:
-
-
-```
-$currentUser = $this->guard()->user();
 ```
 
 ### Contribute

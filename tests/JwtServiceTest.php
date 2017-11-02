@@ -7,74 +7,78 @@
  */
 
 use Lcobucci\JWT\ValidationData;
-use MiladRahimi\LaraJwt\JwtService;
-use MiladRahimi\LaraJwt\Values\Token;
+use MiladRahimi\LaraJwt\Services\JwtServiceInterface;
 
 class JwtServiceTest extends LaraJwtTestCase
 {
-    public function test_jwt_service_it_should_generate_a_token_and_parse_it()
+    /**
+     * @test
+     */
+    public function it_should_generate_a_token_and_parse_it()
     {
         $key = $this->key();
+        $claims = $this->generateClaims();
 
-        $token = $this->generateToken();
+        $jwtService = app(JwtServiceInterface::class);
+        $jwt = $jwtService->generate($claims, $key);
+        $parsedClaims = $jwtService->parse($jwt, $key, new ValidationData());
 
-        $jwt = JwtService::generate($token, $key);
-
-        $validationData = new ValidationData();
-        $validationData->setIssuer($token->iss);
-
-        $userToken = JwtService::parse($jwt, $key, $validationData);
-
-        $this->assertEquals($token->iss, $userToken->iss);
-        $this->assertEquals($token->sub, $userToken->sub);
-        $this->assertEquals($token->aud, $userToken->aud);
-        $this->assertEquals($token->nbf, $userToken->nbf);
-        $this->assertEquals($token->iat, $userToken->iat);
-        $this->assertEquals($token->exp, $userToken->exp);
-        $this->assertEquals($token->jti, $userToken->jti);
-    }
-
-    private function generateToken(): Token
-    {
-        $token = new Token();
-        $token->iss = 'Issuer';
-        $token->sub = 'Subject';
-        $token->aud = 'Audiences';
-        $token->nbf = time();
-        $token->iat = time();
-        $token->exp = time() + 60 * 60 * 24;
-        $token->jti = mt_rand(1, 999);
-
-        return $token;
+        $this->assertEquals($claims['iss'], $parsedClaims['iss']);
+        $this->assertEquals($claims['sub'], $parsedClaims['sub']);
+        $this->assertEquals($claims['aud'], $parsedClaims['aud']);
+        $this->assertEquals($claims['nbf'], $parsedClaims['nbf']);
+        $this->assertEquals($claims['iat'], $parsedClaims['iat']);
+        $this->assertEquals($claims['exp'], $parsedClaims['exp']);
+        $this->assertEquals($claims['jti'], $parsedClaims['jti']);
     }
 
     /**
-     * @expectedException MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
+     * Generate testing claims
+     *
+     * @return array
      */
-    public function test_jwt_service_it_should_raise_an_error_when_token_is_expired()
+    private function generateClaims(): array
     {
-        $key = $this->key();
+        $claims = [];
+        $claims['iss'] = 'Issuer';
+        $claims['sub'] = 'Subject';
+        $claims['aud'] = 'The Audience';
+        $claims['nbf'] = (string)time();
+        $claims['iat'] = (string)time();
+        $claims['exp'] = (string)(time() + 60 * 60 * 24);
+        $claims['jti'] = (string)mt_rand(1, 999);
 
-        $token = $this->generateToken();
-        $token->exp = time() - 1;
-
-        $jwt = JwtService::generate($token, $key);
-
-        $validationData = new ValidationData();
-        $validationData->setIssuer($token->iss);
-
-        JwtService::parse($jwt, $key, $validationData);
+        return $claims;
     }
 
     /**
+     * @test
      * @expectedException MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
      */
-    public function test_jwt_service_it_should_raise_an_error_when_token_is_not_valid()
+    public function it_should_raise_an_error_when_token_is_expired()
+    {
+        $key = $this->key();
+        $claims = $this->generateClaims();
+
+        $claims['exp'] = time() - 1;
+
+        $jwtService = app(JwtServiceInterface::class);
+        $jwt = $jwtService->generate($claims, $key);
+
+        $jwtService->parse($jwt, $key, app(ValidationData::class));
+    }
+
+    /**
+     * @test
+     * @expectedException MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
+     */
+    public function it_should_raise_an_error_when_token_is_not_valid()
     {
         $key = $this->key();
 
         $jwt = 'Invalid Token';
 
-        JwtService::parse($jwt, $key);
+        $jwtService = app(JwtServiceInterface::class);
+        $jwtService->parse($jwt, $key);
     }
 }

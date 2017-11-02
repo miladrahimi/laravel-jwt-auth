@@ -6,7 +6,7 @@
  * Time: 13:51
  */
 
-namespace MiladRahimi\LaraJwt;
+namespace MiladRahimi\LaraJwt\Guards;
 
 use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -14,10 +14,10 @@ use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use MiladRahimi\LaraJwt\Services\JwtService;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
-use MiladRahimi\LaraJwt\Values\Token;
 
-class LaraJwtGuard implements Guard
+class Jwt implements Guard
 {
     use GuardHelpers;
 
@@ -27,7 +27,7 @@ class LaraJwtGuard implements Guard
     /** @var Request $request */
     protected $request;
 
-    /** @var Token $token */
+    /** @var array $token */
     protected $token;
 
     /** @var Authenticatable $user */
@@ -74,7 +74,7 @@ class LaraJwtGuard implements Guard
      */
     public function guest()
     {
-        return is_null($this->user) && (is_null($this->token) || empty($this->token->sub));
+        return is_null($this->user) && (is_null($this->token) || empty($this->token['sub']));
     }
 
     /**
@@ -89,7 +89,7 @@ class LaraJwtGuard implements Guard
         }
 
         if ($this->check()) {
-            return $this->token->sub;
+            return $this->token['sub'];
         }
 
         return null;
@@ -102,7 +102,7 @@ class LaraJwtGuard implements Guard
      */
     public function check()
     {
-        return $this->user || ($this->token && $this->token->sub);
+        return $this->user || ($this->token && $this->token['sub']);
     }
 
     /**
@@ -174,7 +174,7 @@ class LaraJwtGuard implements Guard
         }
 
         if ($this->check()) {
-            return $this->user = $this->provider->retrieveById($this->token->sub);
+            return $this->user = $this->provider->retrieveById($this->token['sub']);
         }
 
         return null;
