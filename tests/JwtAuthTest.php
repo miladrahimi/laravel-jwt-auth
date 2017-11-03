@@ -23,7 +23,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $jwt = $jwtAuth->generateToken($user);
+        $jwt = $jwtAuth->generateTokenFrom($user);
 
         $this->assertNotNull($jwt);
 
@@ -35,16 +35,36 @@ class JwtAuthTest extends LaraJwtTestCase
      * @depends it_should_generate_a_valid_token
      * @param array $info
      */
-    public function it_should_fetch_the_user_from_prev_jwt($info)
+    public function it_should_retrieve_the_user_from_prev_jwt($info)
     {
         $user = $this->mockUserProvider($info['user']);
 
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $parsedUser = $jwtAuth->fetchUser($info['jwt']);
+        $parsedUser = $jwtAuth->retrieveUserFrom($info['jwt']);
 
         $this->assertEquals($user->getAuthIdentifier(), $parsedUser->getAuthIdentifier());
+    }
+
+    /**
+     * @test
+     * @depends it_should_generate_a_valid_token
+     * @param array $info
+     */
+    public function it_should_retrieve_claims_from_jwt($info)
+    {
+        /** @var User $user */
+        $user = $info['user'];
+
+        /** @var JwtAuthInterface $jwtAuth */
+        $jwtAuth = $this->app[JwtAuthInterface::class];
+
+        $claims = $jwtAuth->retrieveClaimsFrom($info['jwt']);
+
+        $this->assertEquals($user->getAuthIdentifier(), $claims['sub']);
+        $this->assertEquals($this->app['config']->get('jwt.issuer'), $claims['iss']);
+        $this->assertEquals($this->app['config']->get('jwt.audience'), $claims['aud']);
     }
 
     /**
@@ -60,7 +80,12 @@ class JwtAuthTest extends LaraJwtTestCase
             ->andReturn($user)
             ->getMock();
 
-        $this->app[UserProvider::class] = $userProviderMock;
+        $authMock = Mockery::mock('auth')
+            ->shouldReceive('getProvider')
+            ->andReturn($userProviderMock)
+            ->getMock();
+
+        $this->app['auth'] = $authMock;
 
         return $user;
     }

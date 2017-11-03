@@ -9,6 +9,7 @@
 namespace MiladRahimi\LaraJwt\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\ServiceProvider;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 
 interface JwtAuthInterface
@@ -20,14 +21,22 @@ interface JwtAuthInterface
      * @param array $claims
      * @return string
      */
-    public function generateToken($user, array $claims = []): string;
+    public function generateTokenFrom($user, array $claims = []): string;
 
     /**
-     * Fetch user from token
+     * Retrieve user from given jwt and by given user provider
      *
      * @param string $jwt
+     * @param ServiceProvider|string $provider
      * @return Authenticatable
-     * @throws InvalidJwtException
      */
-    public function fetchUser(string $jwt): Authenticatable;
+    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable;
+
+    /**
+     * Retrieve claims from given jwt
+     *
+     * @param string $jwt
+     * @return array
+     */
+    public function retrieveClaimsFrom(string $jwt): array;
 }

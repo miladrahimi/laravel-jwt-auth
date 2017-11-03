@@ -13,9 +13,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use MiladRahimi\LaraJwt\Services\JwtService;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
+use MiladRahimi\LaraJwt\Services\JwtServiceInterface;
 
 class Jwt implements Guard
 {
@@ -52,15 +51,14 @@ class Jwt implements Guard
      */
     private function retrieveToken()
     {
-        if ($authorization = $this->request->header('Authorization')) {
-            if (Str::startsWith($authorization, 'Bearer ')) {
-                $jwt = substr($authorization, strlen('Bearer '));
-            } else {
-                $jwt = $authorization;
-            }
+        $authorization = $this->request->header('Authorization');
+
+        if ($authorization && starts_with($authorization, 'Bearer ')) {
+            $jwt = substr($authorization, strlen('Bearer '));
 
             try {
-                $this->token = JwtService::parse($jwt, config('jwt.key'));
+                $jwtService = app(JwtServiceInterface::class);
+                $this->token = $jwtService->parse($jwt, app('config')->get('jwt.key'));
             } catch (InvalidJwtException $e) {
                 $this->token = null;
             }

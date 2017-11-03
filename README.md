@@ -17,7 +17,7 @@ Run the following command in your Laravel project root directory:
 composer require miladrahimi/larajwt:2.*
 ```
 
-Now run the following command to copy `jwt.php` to your Laravel config directory:
+Then run the following command to generate `jwt.php` (the package config) in your Laravel config directory:
 
 ```
 php artisan vendor:publish --tag=larajwt-config
@@ -31,7 +31,7 @@ php artisan vendor:publish --tag=larajwt-config
 
 ### Configuration
 
-Add JWT guard in your `config/auth.php` like the example.
+Add as many as JWT guard you need in your `config/auth.php` like the example.
 
 ```
 'guards' => [
@@ -47,19 +47,17 @@ Add JWT guard in your `config/auth.php` like the example.
 ],
 ```
 
-You may edit `config/jwt.php` based on your your requirements.
+You also may want tp edit `config/jwt.php` based on your your requirements, feel free to do it!
 
 ### Generate JWT from Users
 
-Use the following method to generate jwt from user model:
+Use the method below to generate JWT from any authenticable entity (model):
 
 ```
 $jwt = JwtAuth::generateToken($user);
 ```
 
-You may pass any authenticable entity to this method.
-
-For example you may generate a jwt from user in sign in process like this:
+For example you may generate a JWT from user in sign in process like this:
 
 ```
 $credential = [
@@ -69,7 +67,7 @@ $credential = [
     
 if(Auth::guard('api')->attempt($credential)) {
     $user = Auth::guard('api')->user();
-    $jwt = JwtAuth::generateToken($user);
+    $jwt = JwtAuth::generateTokenFrom($user);
     
     // Return successfull sign in response with the generated jwt.
 } else {
@@ -79,14 +77,50 @@ if(Auth::guard('api')->attempt($credential)) {
 
 ### User Validation
 
-Your clients must add `Authorization: Bearer <jwt>` to the header of their requests.
+Your clients must send header `Authorization: Bearer <jwt>` in their requests.
 
 For example if you have considered JWT guard for your APIs (in `config/auth.php`),
-you can `auth:api` middleware to your authenticated API routes.
-and to retrieve current user in your application you can use following code:
+you should set `auth:api` middleware to your authenticated API routes.
+
+To retrieve current user in your application (controllers for example) you can use following code:
 
 ```
 $currentUser = Auth::guard('api')->user();
+```
+
+### Retrieve User Manually
+
+You may need to retrieve user from generated JWTs manually, no worry! just do it this way:
+
+```
+$user = JwtAuth::retrieveUserFrom($jwt);
+
+```
+
+It uses default user provider to fetch the user,
+if you are using different provider you can pass it to the method as the second parameter like this:
+
+```
+$admin = JwtAuth::retrieveUserFrom($jwt, 'admin');
+```
+
+### Retrieve JWT Claims Manually
+
+You my even go further and need to retrieve JWT claims manually, it has considered too.
+
+```
+$claims = JwtAuth::retrieveClaimsFrom($jwt);
+```
+
+The mentioned method returns associative array of claims with following structure:
+
+```
+[
+    'sub' => '666',
+    'iss' => 'Your app name',
+    'aud' => 'Your app audience',
+    // ...
+]
 ```
 
 ### Contribute

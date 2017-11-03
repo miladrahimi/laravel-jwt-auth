@@ -13,11 +13,10 @@ use Illuminate\Contracts\Auth\UserProvider;
 
 class JwtAuth implements JwtAuthInterface
 {
-
     /**
      * @inheritdoc
      */
-    public function generateToken($user, array $claims = []): string
+    public function generateTokenFrom($user, array $claims = []): string
     {
         if ($user instanceof Authenticatable) {
             $user = $user->getAuthIdentifier();
@@ -43,15 +42,24 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function fetchUser(string $jwt): Authenticatable
+    public function retrieveClaimsFrom(string $jwt): array
     {
         /** @var JwtServiceInterface $jwtService */
         $jwtService = app(JwtServiceInterface::class);
-        $claims = $jwtService->parse($jwt, app('config')->get('jwt.key'));
+
+        return $jwtService->parse($jwt, app('config')->get('jwt.key'));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable
+    {
+        $claims = $this->retrieveClaimsFrom($jwt);
 
         /** @var UserProvider $provider */
-        $provider = app(UserProvider::class);
+        $provider = app('auth')->getProvider($provider);
 
-        return $provider->retrieveById((string)($claims['sub'] ?? null));
+        return $provider->retrieveById(($claims['sub'] ?? null));
     }
 }

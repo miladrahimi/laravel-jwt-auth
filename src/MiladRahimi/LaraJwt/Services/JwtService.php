@@ -10,6 +10,7 @@ namespace MiladRahimi\LaraJwt\Services;
 
 use Exception;
 use Lcobucci\JWT\Builder;
+use Lcobucci\JWT\Claim\EqualsTo;
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\Signer\Hmac\Sha512;
 use Lcobucci\JWT\ValidationData;
@@ -56,7 +57,12 @@ class JwtService implements JwtServiceInterface
                 throw new InvalidJwtException('Jwt verification error');
             }
 
-            $claims = $data->getClaims();
+            $claims = [];
+
+            /** @var EqualsTo $claim */
+            foreach ($data->getClaims() as $claim) {
+                $claims[$claim->getName()] = $claim->getValue();
+            }
         } catch (Exception $e) {
             throw new InvalidJwtException($e->getMessage(), 0, $e);
         }
