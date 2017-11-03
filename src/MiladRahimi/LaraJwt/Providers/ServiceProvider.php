@@ -53,7 +53,7 @@ class ServiceProvider extends Provider
 
         // Install config on vendor:publish
         $this->publishes([
-            __DIR__ . '/../../../config/jwt.php' => config_path('jwt.php')
+            __DIR__ . '/../../../../config/jwt.php' => config_path('jwt.php')
         ], 'larajwt-config');
     }
 }
