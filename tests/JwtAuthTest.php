@@ -9,6 +9,7 @@
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Foundation\Auth\User;
 use MiladRahimi\LaraJwt\Services\JwtAuthInterface;
+use MiladRahimi\LaraJwt\Services\JwtServiceInterface;
 
 class JwtAuthTest extends LaraJwtTestCase
 {
@@ -65,6 +66,65 @@ class JwtAuthTest extends LaraJwtTestCase
         $this->assertEquals($user->getAuthIdentifier(), $claims['sub']);
         $this->assertEquals($this->app['config']->get('jwt.issuer'), $claims['iss']);
         $this->assertEquals($this->app['config']->get('jwt.audience'), $claims['aud']);
+    }
+
+    /**
+     * @test
+     * @depends it_should_generate_a_valid_token
+     * @param array $info
+     */
+    public function is_should_recognize_jwt_is_valid($info)
+    {
+        /** @var JwtAuthInterface $jwtAuth */
+        $jwtAuth = $this->app[JwtAuthInterface::class];
+
+        $this->assertEquals(true, $jwtAuth->isJwtValid($info['jwt']));
+    }
+
+    /**
+     * @test
+     */
+    public function is_should_say_the_jwt_is_invalid_when_it_is_not_valid()
+    {
+        $jwt = 'Shit';
+
+        /** @var JwtAuthInterface $jwtAuth */
+        $jwtAuth = $this->app[JwtAuthInterface::class];
+
+        $this->assertEquals(false, $jwtAuth->isJwtValid($jwt));
+    }
+
+    /**
+     * @test
+     */
+    public function is_should_say_the_jwt_is_invalid_when_it_is_corrupted()
+    {
+        /** @var JwtServiceInterface $jwtService */
+        $jwtService = $this->app[JwtServiceInterface::class];
+
+        $jwt = $jwtService->generate(['sub' => 666], $this->key());
+        $jwt = substr($jwt, 0, strpos($jwt, '.'));
+
+        /** @var JwtAuthInterface $jwtAuth */
+        $jwtAuth = $this->app[JwtAuthInterface::class];
+
+        $this->assertEquals(false, $jwtAuth->isJwtValid($jwt));
+    }
+
+    /**
+     * @test
+     */
+    public function is_should_say_the_jwt_is_invalid_when_it_has_not_sub_claim()
+    {
+        /** @var JwtServiceInterface $jwtService */
+        $jwtService = $this->app[JwtServiceInterface::class];
+
+        $jwt = $jwtService->generate([], $this->key());
+
+        /** @var JwtAuthInterface $jwtAuth */
+        $jwtAuth = $this->app[JwtAuthInterface::class];
+
+        $this->assertEquals(false, $jwtAuth->isJwtValid($jwt));
     }
 
     /**

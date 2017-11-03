@@ -39,4 +39,12 @@ interface JwtAuthInterface
      * @return array
      */
     public function retrieveClaimsFrom(string $jwt): array;
+
+    /**
+     * Is given JWT valid?
+     *
+     * @param string $jwt
+     * @return bool
+     */
+    public function isJwtValid(string $jwt): bool;
 }

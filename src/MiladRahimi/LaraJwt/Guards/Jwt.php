@@ -13,8 +13,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Http\Request;
-use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
-use MiladRahimi\LaraJwt\Services\JwtServiceInterface;
+use MiladRahimi\LaraJwt\Services\JwtAuthInterface;
 
 class Jwt implements Guard
 {
@@ -56,10 +55,12 @@ class Jwt implements Guard
         if ($authorization && starts_with($authorization, 'Bearer ')) {
             $jwt = substr($authorization, strlen('Bearer '));
 
-            try {
-                $jwtService = app(JwtServiceInterface::class);
-                $this->token = $jwtService->parse($jwt, app('config')->get('jwt.key'));
-            } catch (InvalidJwtException $e) {
+            /** @var JwtAuthInterface $jwtAuth */
+            $jwtAuth = app(JwtAuthInterface::class);
+
+            if($jwtAuth->isJwtValid($jwt)) {
+                $this->token = $jwtAuth->retrieveClaimsFrom($jwt);
+            } else {
                 $this->token = null;
             }
         }
@@ -72,7 +73,7 @@ class Jwt implements Guard
      */
     public function guest()
     {
-        return is_null($this->user) && (is_null($this->token) || empty($this->token['sub']));
+        return is_null($this->user) && is_null($this->token);
     }
 
     /**
@@ -100,7 +101,7 @@ class Jwt implements Guard
      */
     public function check()
     {
-        return $this->user || ($this->token && $this->token['sub']);
+        return $this->user || count($this->token);
     }
 
     /**
@@ -212,6 +213,7 @@ class Jwt implements Guard
     public function setProvider(UserProvider $provider)
     {
         $this->provider = $provider;
+
         return $this;
     }
 

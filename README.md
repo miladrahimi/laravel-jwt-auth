@@ -132,6 +132,15 @@ The mentioned method returns associative array of claims with following structur
 ]
 ```
 
+### Exceptions
+
+```
+Exception Class: LaraJwtConfiguringException
+Exception Message: LaraJwt config not found.
+```
+
+This exception would be thrown if you had not published the package config (mentioned in Installation section).
+
 ### Contribute
 
 Any contribution will be appreciate it :D

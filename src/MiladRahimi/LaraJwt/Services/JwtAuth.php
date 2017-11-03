@@ -10,14 +10,20 @@ namespace MiladRahimi\LaraJwt\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\UserProvider;
+use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 use MiladRahimi\LaraJwt\Exceptions\LaraJwtConfiguringException;
 
 class JwtAuth implements JwtAuthInterface
 {
+    /**
+     * JwtAuth constructor.
+     *
+     * @throws LaraJwtConfiguringException
+     */
     public function __construct()
     {
         if (empty(app('config')->get('jwt'))) {
-            throw new LaraJwtConfiguringException('LaraJwt config not found');
+            throw new LaraJwtConfiguringException('LaraJwt config not found.');
         }
     }
 
@@ -69,5 +75,19 @@ class JwtAuth implements JwtAuthInterface
         $provider = app('auth')->getProvider($provider);
 
         return $provider->retrieveById(($claims['sub'] ?? null));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isJwtValid(string $jwt): bool
+    {
+        try {
+            $claims = $this->retrieveClaimsFrom($jwt);
+
+            return isset($claims['sub']);
+        } catch (InvalidJwtException $e) {
+            return false;
+        }
     }
 }
