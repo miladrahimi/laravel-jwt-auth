@@ -9,6 +9,7 @@
 namespace MiladRahimi\LaraJwt\Providers;
 
 use Illuminate\Support\ServiceProvider as Provider;
+use Lcobucci\JWT\Signer\Hmac\Sha512;
 use MiladRahimi\LaraJwt\Guards\Jwt as JwtGuard;
 use MiladRahimi\LaraJwt\Services\JwtAuth;
 use MiladRahimi\LaraJwt\Services\JwtAuthInterface;
@@ -26,6 +27,8 @@ class ServiceProvider extends Provider
     {
         $this->app->singleton(JwtServiceInterface::class, JwtService::class);
         $this->app->singleton(JwtAuthInterface::class, JwtAuth::class);
+
+        $this->app->bind('larajwt.signer', Sha512::class);
     }
 
     /**

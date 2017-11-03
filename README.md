@@ -75,14 +75,23 @@ if(Auth::guard('api')->attempt($credential)) {
 }
 ```
 
-### User Validation
+### Authenticated Routes
+
+After configuring guards in `config/auth.php` you can protect routes by the defined guards.
+
+For the auth configuration demonstrated above you can protect routes this way:
+
+```
+Route::group(['middleware' => 'auth:api'], function () {
+    // Routes...
+});
+```
+
+### Authenticated User
 
 Your clients must send header `Authorization: Bearer <jwt>` in their requests.
 
-For example if you have considered JWT guard for your APIs (in `config/auth.php`),
-you should set `auth:api` middleware to your authenticated API routes.
-
-To retrieve current user in your application (controllers for example) you can use following code:
+To retrieve current user in your application (controllers for example) you can do it this way:
 
 ```
 $currentUser = Auth::guard('api')->user();

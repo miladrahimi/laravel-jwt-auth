@@ -10,9 +10,17 @@ namespace MiladRahimi\LaraJwt\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\UserProvider;
+use MiladRahimi\LaraJwt\Exceptions\LaraJwtConfiguringException;
 
 class JwtAuth implements JwtAuthInterface
 {
+    public function __construct()
+    {
+        if (empty(app('config')->get('jwt'))) {
+            throw new LaraJwtConfiguringException('LaraJwt config not found');
+        }
+    }
+
     /**
      * @inheritdoc
      */

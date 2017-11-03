@@ -12,7 +12,6 @@ use Exception;
 use Lcobucci\JWT\Builder;
 use Lcobucci\JWT\Claim\EqualsTo;
 use Lcobucci\JWT\Parser;
-use Lcobucci\JWT\Signer\Hmac\Sha512;
 use Lcobucci\JWT\ValidationData;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 
@@ -27,10 +26,12 @@ class JwtService implements JwtServiceInterface
         $jwtBuilder = app(Builder::class);
 
         foreach ($claims as $name => $value) {
-            $jwtBuilder->set((string)$name, (string)$value);
+            $jwtBuilder->set($name, $value);
         }
 
-        $jwt = $jwtBuilder->sign(new Sha512(), $key)->getToken();
+        $algorithm = app('larajwt.signer');
+
+        $jwt = $jwtBuilder->sign($algorithm, $key)->getToken();
 
         return $jwt;
     }
@@ -42,9 +43,7 @@ class JwtService implements JwtServiceInterface
     {
         /** @var Parser $parser */
         $parser = app(Parser::class);
-
-        /** @var Sha512 $algorithm */
-        $algorithm = app(Sha512::class);
+        $algorithm = app('larajwt.signer');
 
         try {
             $data = $parser->parse($jwt);
