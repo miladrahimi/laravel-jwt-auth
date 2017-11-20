@@ -58,7 +58,7 @@ class Jwt implements Guard
             /** @var JwtAuthInterface $jwtAuth */
             $jwtAuth = app(JwtAuthInterface::class);
 
-            if($jwtAuth->isJwtValid($jwt)) {
+            if ($jwtAuth->isJwtValid($jwt)) {
                 $this->token = $jwtAuth->retrieveClaimsFrom($jwt);
             } else {
                 $this->token = null;
@@ -173,7 +173,12 @@ class Jwt implements Guard
         }
 
         if ($this->check()) {
-            return $this->user = $this->provider->retrieveById($this->token['sub']);
+            $key = 'jwt:users:' . $this->token['sub'];
+            $ttl = app('config')->get('jwt.ttl') / 60;
+
+            return $this->user = app('cache')->remember($key, $ttl, function () {
+                $this->provider->retrieveById($this->token['sub']);
+            });
         }
 
         return null;
