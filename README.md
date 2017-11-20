@@ -97,6 +97,8 @@ To retrieve current user in your application (controllers for example) you can d
 $currentUser = Auth::guard('api')->user();
 ```
 
+Since LaraJwt caches user fetching it can authenticate users without touching database.
+
 ### Retrieve User Manually
 
 You may need to retrieve user from generated JWTs manually, no worry! just do it this way:
@@ -140,6 +142,23 @@ Exception Message: LaraJwt config not found.
 ```
 
 This exception would be thrown if you had not published the package config (mentioned in Installation section).
+
+### JWT vs Stored Tokens
+
+You may consider simple database-stored tokens as the alternative for JWT for authenticating,
+So we have provided some differences and comparison for you.
+
+#### Cons
+
+* More HTTP overhead, generated tokens are long.
+* Force logout is more complex since you need JTI blacklist.
+
+#### Pros
+
+* Simpler.
+* No need database column to store generated tokens.
+* No database touch if you only need user id.
+* Less database touch if you cache user fetching (LaraJwt does it for you).
 
 ### Contribute
 

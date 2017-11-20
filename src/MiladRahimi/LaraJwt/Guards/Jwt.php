@@ -177,7 +177,7 @@ class Jwt implements Guard
             $ttl = app('config')->get('jwt.ttl') / 60;
 
             return $this->user = app('cache')->remember($key, $ttl, function () {
-                $this->provider->retrieveById($this->token['sub']);
+                return $this->provider->retrieveById($this->token['sub']);
             });
         }
 
