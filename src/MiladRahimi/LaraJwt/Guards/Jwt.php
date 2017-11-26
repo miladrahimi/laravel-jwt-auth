@@ -136,7 +136,7 @@ class Jwt implements Guard
      */
     protected function hasValidCredentials($user, $credentials)
     {
-        return $this->provider->validateCredentials($user, $credentials);
+        return $user && $this->provider->validateCredentials($user, $credentials);
     }
 
     /**
