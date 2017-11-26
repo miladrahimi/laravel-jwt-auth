@@ -134,6 +134,66 @@ The mentioned method returns associative array of claims with following structur
 ]
 ```
 
+### Cache
+
+LaraJwt caches JWTs in default,
+so after first authentication it remembers token as long as ttl which is set in config.
+
+If you need to clear cache for a specific user you can use following method:
+
+```
+JwtAuth::clearCache($user);
+```
+
+You can pass user model (Authenticable) or its id the `clearCache` method.
+
+### Post-hooks
+
+Post-hooks are closures which will be called after authentication.
+
+For example if you have considered boolean property `is_active` for users,
+you probably want to check its value after authentication and raise some exception if it is false.
+
+You can register hooks as many as you need, LaraJwt runs them after authentication.
+
+AuthServiceProvider seems a good place to register hooks.
+
+```
+class AuthServiceProvider extends ServiceProvider
+{
+    // ...
+
+    public function boot()
+    {
+        // ...
+        
+        $jwtAuth = $this->app->make(JwtAuthInterface::class);
+        
+        // Check if user is active or not
+        $jwtAuth->registerPostHook(function (User $user) {
+            if ($user->is_active == false) {
+                throw new UserIsNotActiveException();
+            }
+        });
+    }
+}
+```
+
+The `registerPostHook` takes a closure with on argument for authenticated user.
+
+You may inject following code to the `render` method in `Laravel/app/Exceptions/Handler.php`:
+
+```
+public function render($request, Exception $exception)
+{
+    if ($exception instanceof UserIsNotActiveException) {
+        return response()->json(['error' => 'You are not active...'], 403);
+    }
+    
+    // ...
+}
+```
+
 ### Exceptions
 
 ```
