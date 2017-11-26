@@ -25,11 +25,11 @@ class Jwt implements Guard
     /** @var Request $request */
     protected $request;
 
-    /** @var array $token */
-    protected $token;
-
     /** @var Authenticatable $user */
     protected $user;
+
+    /** @var JwtAuthInterface $jwtAuth */
+    protected $jwtAuth;
 
     /**
      * Create a new authentication guard.
@@ -42,26 +42,36 @@ class Jwt implements Guard
         $this->provider = $provider;
         $this->request = $request;
 
-        $this->retrieveToken();
+        $this->jwtAuth = app(JwtAuthInterface::class);
+
+        $this->retrieveUser();
     }
 
     /**
-     * Retrieve token from header
+     * Retrieve user from jwt token in the request header
      */
-    private function retrieveToken()
+    private function retrieveUser()
     {
         $authorization = $this->request->header('Authorization');
 
         if ($authorization && starts_with($authorization, 'Bearer ')) {
             $jwt = substr($authorization, strlen('Bearer '));
 
-            /** @var JwtAuthInterface $jwtAuth */
-            $jwtAuth = app(JwtAuthInterface::class);
+            if ($this->jwtAuth->isJwtValid($jwt)) {
+                $id = $this->jwtAuth->retrieveClaimsFrom($jwt)['sub'];
 
-            if ($jwtAuth->isJwtValid($jwt)) {
-                $this->token = $jwtAuth->retrieveClaimsFrom($jwt);
+                $key = 'jwt:users:' . $id;
+                $ttl = app('config')->get('jwt.ttl') / 60;
+
+                $this->user = app('cache')->remember($key, $ttl, function () use ($id) {
+                    $user = $this->provider->retrieveById($id);
+
+                    $this->jwtAuth->runPostHooks($user);
+
+                    return $user;
+                });
             } else {
-                $this->token = null;
+                $this->user = null;
             }
         }
     }
@@ -73,7 +83,7 @@ class Jwt implements Guard
      */
     public function guest()
     {
-        return is_null($this->user) && is_null($this->token);
+        return is_null($this->user);
     }
 
     /**
@@ -83,25 +93,7 @@ class Jwt implements Guard
      */
     public function id()
     {
-        if ($this->user) {
-            return $this->user->getAuthIdentifier();
-        }
-
-        if ($this->check()) {
-            return $this->token['sub'];
-        }
-
-        return null;
-    }
-
-    /**
-     * Determine if the current user is authenticated.
-     *
-     * @return bool
-     */
-    public function check()
-    {
-        return $this->user || count($this->token);
+        return $this->user ? $this->user->getAuthIdentifier() : null;
     }
 
     /**
@@ -144,7 +136,7 @@ class Jwt implements Guard
      */
     protected function hasValidCredentials($user, $credentials)
     {
-        return !is_null($user) && $this->provider->validateCredentials($user, $credentials);
+        return $this->provider->validateCredentials($user, $credentials);
     }
 
     /**
@@ -168,20 +160,17 @@ class Jwt implements Guard
      */
     public function user()
     {
-        if ($this->user) {
-            return $this->user;
-        }
+        return $this->user;
+    }
 
-        if ($this->check()) {
-            $key = 'jwt:users:' . $this->token['sub'];
-            $ttl = app('config')->get('jwt.ttl') / 60;
-
-            return $this->user = app('cache')->remember($key, $ttl, function () {
-                return $this->provider->retrieveById($this->token['sub']);
-            });
-        }
-
-        return null;
+    /**
+     * Determine if the current user is authenticated.
+     *
+     * @return bool
+     */
+    public function check()
+    {
+        return !is_null($this->user);
     }
 
     /**

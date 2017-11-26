@@ -8,6 +8,7 @@
 
 namespace MiladRahimi\LaraJwt\Services;
 
+use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\UserProvider;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
@@ -15,6 +16,9 @@ use MiladRahimi\LaraJwt\Exceptions\LaraJwtConfiguringException;
 
 class JwtAuth implements JwtAuthInterface
 {
+    /** @var Closure[] $postHooks */
+    private $postHooks = [];
+
     /**
      * JwtAuth constructor.
      *
@@ -56,17 +60,6 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function retrieveClaimsFrom(string $jwt): array
-    {
-        /** @var JwtServiceInterface $jwtService */
-        $jwtService = app(JwtServiceInterface::class);
-
-        return $jwtService->parse($jwt, app('config')->get('jwt.key'));
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable
     {
         $claims = $this->retrieveClaimsFrom($jwt);
@@ -75,6 +68,17 @@ class JwtAuth implements JwtAuthInterface
         $provider = app('auth')->getProvider($provider);
 
         return $provider->retrieveById(($claims['sub'] ?? null));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function retrieveClaimsFrom(string $jwt): array
+    {
+        /** @var JwtServiceInterface $jwtService */
+        $jwtService = app(JwtServiceInterface::class);
+
+        return $jwtService->parse($jwt, app('config')->get('jwt.key'));
     }
 
     /**
@@ -89,5 +93,37 @@ class JwtAuth implements JwtAuthInterface
         } catch (InvalidJwtException $e) {
             return false;
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function registerPostHook(Closure $hook)
+    {
+        $this->postHooks[] = $hook;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function runPostHooks($user)
+    {
+        foreach ($this->postHooks as $hook) {
+            $hook($user);
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function clearCache($user)
+    {
+        if ($user instanceof Authenticatable) {
+            $user = $user->getAuthIdentifier();
+        }
+
+        $key = 'jwt:users:' . $user;
+
+        app('cache')->forget($key);
     }
 }

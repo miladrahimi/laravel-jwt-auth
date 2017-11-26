@@ -8,9 +8,9 @@
 
 namespace MiladRahimi\LaraJwt\Services;
 
+use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\ServiceProvider;
-use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 
 interface JwtAuthInterface
 {
@@ -47,4 +47,25 @@ interface JwtAuthInterface
      * @return bool
      */
     public function isJwtValid(string $jwt): bool;
+
+    /**
+     * Register new user validator to validate user
+     *
+     * @param Closure $hook
+     */
+    public function registerPostHook(Closure $hook);
+
+    /**
+     * Run registered post-hooks
+     *
+     * @param Authenticatable|int $user
+     */
+    public function runPostHooks($user);
+
+    /**
+     * Clear JWT cache
+     *
+     * @param Authenticatable|int $user
+     */
+    public function clearCache($user);
 }
