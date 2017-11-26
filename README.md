@@ -54,7 +54,7 @@ You also may want tp edit `config/jwt.php` based on your your requirements, feel
 Use the method below to generate JWT from any authenticable entity (model):
 
 ```
-$jwt = JwtAuth::generateToken($user);
+$jwt = JwtAuth::generateTokenFrom($user);
 ```
 
 For example you may generate a JWT from user in sign in process like this:
