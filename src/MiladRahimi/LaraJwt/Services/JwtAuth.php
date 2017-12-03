@@ -126,4 +126,21 @@ class JwtAuth implements JwtAuthInterface
 
         app('cache')->forget($key);
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function invalidate($user)
+    {
+        if ($user instanceof Authenticatable) {
+            $user = $user->getAuthIdentifier();
+        }
+
+        /** @var \Illuminate\Cache\CacheManager $cache */
+        $cache = app('cache');
+
+        $ttl = app('config')->get('jwt.ttl') / 60;
+
+        $cache->put("jwt:users:$user:logout", time(), $ttl);
+    }
 }

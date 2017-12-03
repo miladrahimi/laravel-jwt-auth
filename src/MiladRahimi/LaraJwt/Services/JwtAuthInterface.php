@@ -68,4 +68,11 @@ interface JwtAuthInterface
      * @param Authenticatable|int $user
      */
     public function clearCache($user);
+
+    /**
+     * Logout user
+     *
+     * @param Authenticatable|int $user
+     */
+    public function invalidate($user);
 }

@@ -58,13 +58,21 @@ class Jwt implements Guard
             $jwt = substr($authorization, strlen('Bearer '));
 
             if ($this->jwtAuth->isJwtValid($jwt)) {
-                $id = $this->jwtAuth->retrieveClaimsFrom($jwt)['sub'];
+                $claims = $this->jwtAuth->retrieveClaimsFrom($jwt);
+
+                $id = $claims['sub'];
+
+                $logoutTime = app('cache')->get("jwt:users:$id:logout");
+
+                if ($logoutTime && $logoutTime > $claims['exp']) {
+                    return null;
+                }
 
                 $key = 'jwt:users:' . $id;
                 $ttl = app('config')->get('jwt.ttl') / 60;
 
-                $this->user = app('cache')->remember($key, $ttl, function () use ($id) {
-                    $user = $this->provider->retrieveById($id);
+                $this->user = app('cache')->remember($key, $ttl, function () use ($jwt) {
+                    $user = $this->jwtAuth->retrieveUserFrom($jwt);
 
                     $this->jwtAuth->runPostHooks($user);
 
@@ -230,5 +238,16 @@ class Jwt implements Guard
     public function setUser(Authenticatable $user)
     {
         $this->user = $user;
+    }
+
+    /**
+     * Logout current user (Invalidate his/her JWT)
+     */
+    public function logout()
+    {
+        if ($this->user) {
+            $this->jwtAuth->invalidate($this->user);
+            $this->user = null;
+        }
     }
 }
