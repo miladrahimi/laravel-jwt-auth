@@ -9,7 +9,7 @@
 namespace MiladRahimi\LaraJwt\Services;
 
 use Exception;
-use Lcobucci\JWT\Builder;
+use Lcobucci\JWT\Builder as JwtBuilder;
 use Lcobucci\JWT\Claim\EqualsTo;
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\ValidationData;
@@ -22,16 +22,14 @@ class JwtService implements JwtServiceInterface
      */
     public function generate(array $claims, string $key): string
     {
-        /** @var Builder $jwtBuilder */
-        $jwtBuilder = app(Builder::class);
+        /** @var JwtBuilder $jwtBuilder */
+        $jwtBuilder = app(JwtBuilder::class);
 
         foreach ($claims as $name => $value) {
             $jwtBuilder->set($name, $value);
         }
 
-        $algorithm = app('larajwt.signer');
-
-        $jwt = $jwtBuilder->sign($algorithm, $key)->getToken();
+        $jwt = $jwtBuilder->sign(app('larajwt.signer'), $key)->getToken();
 
         return $jwt;
     }
@@ -43,27 +41,28 @@ class JwtService implements JwtServiceInterface
     {
         /** @var Parser $parser */
         $parser = app(Parser::class);
+
         $algorithm = app('larajwt.signer');
 
         try {
             $data = $parser->parse($jwt);
-
-            if ($validationData && $data->validate($validationData) == false) {
-                throw new InvalidJwtException('Jwt validation error');
-            }
-
-            if ($data->verify($algorithm, $key) == false) {
-                throw new InvalidJwtException('Jwt verification error');
-            }
-
-            $claims = [];
-
-            /** @var EqualsTo $claim */
-            foreach ($data->getClaims() as $claim) {
-                $claims[$claim->getName()] = $claim->getValue();
-            }
         } catch (Exception $e) {
             throw new InvalidJwtException($e->getMessage(), 0, $e);
+        }
+
+        if ($validationData && $data->validate($validationData) == false) {
+            throw new InvalidJwtException('Jwt validation failed.');
+        }
+
+        if ($data->verify($algorithm, $key) == false) {
+            throw new InvalidJwtException('Jwt verification failed.');
+        }
+
+        $claims = [];
+
+        /** @var EqualsTo $claim */
+        foreach ($data->getClaims() as $claim) {
+            $claims[$claim->getName()] = $claim->getValue();
         }
 
         return $claims;

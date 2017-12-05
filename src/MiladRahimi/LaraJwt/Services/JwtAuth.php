@@ -89,7 +89,7 @@ class JwtAuth implements JwtAuthInterface
         try {
             $claims = $this->retrieveClaimsFrom($jwt);
 
-            return isset($claims['sub']);
+            return isset($claims['sub'], $claims['jti'], $claims['exp']);
         } catch (InvalidJwtException $e) {
             return false;
         }
@@ -122,25 +122,44 @@ class JwtAuth implements JwtAuthInterface
             $user = $user->getAuthIdentifier();
         }
 
-        $key = 'jwt:users:' . $user;
-
-        app('cache')->forget($key);
+        app('cache')->forget($this->getUserCacheKey($user));
     }
 
     /**
      * @inheritdoc
      */
-    public function invalidate($user)
+    public function logout($user)
     {
         if ($user instanceof Authenticatable) {
             $user = $user->getAuthIdentifier();
         }
 
-        /** @var \Illuminate\Cache\CacheManager $cache */
-        $cache = app('cache');
-
         $ttl = app('config')->get('jwt.ttl') / 60;
 
-        $cache->put("jwt:users:$user:logout", time(), $ttl);
+        app('cache')->put($this->getLogoutCacheKey($user), time(), $ttl);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getUserCacheKey($user)
+    {
+        if ($user instanceof Authenticatable) {
+            $user = $user->getAuthIdentifier();
+        }
+
+        return 'jwt:users:' . $user;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getLogoutCacheKey($user)
+    {
+        if ($user instanceof Authenticatable) {
+            $user = $user->getAuthIdentifier();
+        }
+
+        return "jwt:users:$user:logout";
     }
 }

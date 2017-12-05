@@ -168,7 +168,7 @@ class JwtAuthTest extends LaraJwtTestCase
     /**
      * @test
      */
-    public function it_should_set_logout_on_invalidating_token()
+    public function it_should_set_logout_user()
     {
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
@@ -177,7 +177,7 @@ class JwtAuthTest extends LaraJwtTestCase
 
         $time = time();
 
-        $jwtAuth->invalidate($user);
+        $jwtAuth->logout($user);
 
         $cached = app('cache')->get("jwt:users:{$user->getAuthIdentifier()}:logout");
 

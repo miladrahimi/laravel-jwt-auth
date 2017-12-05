@@ -44,44 +44,57 @@ class Jwt implements Guard
 
         $this->jwtAuth = app(JwtAuthInterface::class);
 
-        $this->retrieveUser();
+        $this->user = $this->retrieveUser();
     }
 
     /**
      * Retrieve user from jwt token in the request header
+     *
+     * @return Authenticatable|null
      */
     private function retrieveUser()
+    {
+        $jwt = $this->getToken();
+
+        if ($this->jwtAuth->isJwtValid($jwt) == false) {
+            return null;
+        }
+
+        $claims = $this->jwtAuth->retrieveClaimsFrom($jwt);
+
+        $logoutTime = app('cache')->get($this->jwtAuth->getLogoutCacheKey($claims['sub']));
+
+        if ($logoutTime && $logoutTime > $claims['exp']) {
+            return null;
+        }
+
+        $key = $this->jwtAuth->getUserCacheKey($claims['sub']);
+
+        $ttl = app('config')->get('jwt.ttl') / 60;
+
+        return app('cache')->remember($key, $ttl, function () use ($jwt) {
+            $user = $this->jwtAuth->retrieveUserFrom($jwt);
+
+            $this->jwtAuth->runPostHooks($user);
+
+            return $user;
+        });
+    }
+
+    /**
+     * Get current user JWT
+     *
+     * @return null|string
+     */
+    public function getToken()
     {
         $authorization = $this->request->header('Authorization');
 
         if ($authorization && starts_with($authorization, 'Bearer ')) {
-            $jwt = substr($authorization, strlen('Bearer '));
-
-            if ($this->jwtAuth->isJwtValid($jwt)) {
-                $claims = $this->jwtAuth->retrieveClaimsFrom($jwt);
-
-                $id = $claims['sub'];
-
-                $logoutTime = app('cache')->get("jwt:users:$id:logout");
-
-                if ($logoutTime && $logoutTime > $claims['exp']) {
-                    return null;
-                }
-
-                $key = 'jwt:users:' . $id;
-                $ttl = app('config')->get('jwt.ttl') / 60;
-
-                $this->user = app('cache')->remember($key, $ttl, function () use ($jwt) {
-                    $user = $this->jwtAuth->retrieveUserFrom($jwt);
-
-                    $this->jwtAuth->runPostHooks($user);
-
-                    return $user;
-                });
-            } else {
-                $this->user = null;
-            }
+            return substr($authorization, strlen('Bearer '));
         }
+
+        return null;
     }
 
     /**
@@ -246,7 +259,7 @@ class Jwt implements Guard
     public function logout()
     {
         if ($this->user) {
-            $this->jwtAuth->invalidate($this->user);
+            $this->jwtAuth->logout($this->user);
             $this->user = null;
         }
     }

@@ -74,5 +74,23 @@ interface JwtAuthInterface
      *
      * @param Authenticatable|int $user
      */
-    public function invalidate($user);
+    public function logout($user);
+
+    /**
+     * Get cache key LaraJwt uses to cache tokens
+     *
+     * @param Authenticatable|int $user
+     * @return string|null
+     */
+    public function getUserCacheKey($user);
+
+    /**
+     * Get cache key LaraJwt uses to cache user logout times
+     *
+     * @param Authenticatable|int $user
+     * @return string|null
+     */
+    public function getLogoutCacheKey($user);
+
+
 }

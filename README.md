@@ -25,29 +25,11 @@ php artisan vendor:publish --tag=larajwt-config
 
 #### Notes on Installation
 
+* Edit `config/jwt.php` based on your requirements and environment.
+
 * The package service provider will be automatically discovered by Laravel package discovery.
 
 * The `JwtAuth` alias for `MiladRahimi\LaraJwt\Facades\JwtAuth` will be automatically registered.
-
-### Configuration
-
-Add as many as JWT guard you need in your `config/auth.php` like the example.
-
-```
-'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
-    ],
-
-    'api' => [
-        'driver' => 'jwt',
-        'provider' => 'users',
-    ],
-],
-```
-
-You also may want tp edit `config/jwt.php` based on your your requirements, feel free to do it!
 
 ### Generate JWT from Users
 
@@ -75,6 +57,24 @@ if(Auth::guard('api')->attempt($credential)) {
 }
 ```
 
+### Guards
+
+Add as many as JWT guard you need in your `config/auth.php` like this example:
+
+```
+'guards' => [
+    'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
+    ],
+
+    'api' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
+],
+```
+
 ### Authenticated Routes
 
 After configuring guards in `config/auth.php` you can protect routes by the defined guards.
@@ -87,9 +87,9 @@ Route::group(['middleware' => 'auth:api'], function () {
 });
 ```
 
-### Authenticated User
-
 Your clients must send header `Authorization: Bearer <jwt>` in their requests.
+
+### Authenticated User
 
 To retrieve current user in your application (controllers for example) you can do it this way:
 
@@ -211,18 +211,17 @@ So we have provided some differences and comparison for you.
 #### Cons
 
 * More HTTP overhead, generated tokens are long.
-* Force logout is more complex since you need JTI blacklist.
+* Force logout is more complex and tricky (LaraJwt handles it for you).
 
 #### Pros
 
-* Simpler.
-* No need database column to store generated tokens.
+* No need to database column for storing generated tokens.
 * No database touch if you only need user id.
 * Less database touch if you cache user fetching (LaraJwt does it for you).
 
 ### Contribute
 
-Any contribution will be appreciate it :D
+Any contribution will be appreciated :D
 
 ## License
 This package is released under the [MIT License](http://opensource.org/licenses/mit-license.php).
