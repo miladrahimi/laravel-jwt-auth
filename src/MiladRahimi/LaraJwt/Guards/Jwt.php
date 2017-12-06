@@ -28,8 +28,14 @@ class Jwt implements Guard
     /** @var Authenticatable $user */
     protected $user;
 
+    /** @var string $token */
+    protected $token;
+
     /** @var JwtAuthInterface $jwtAuth */
     protected $jwtAuth;
+
+    /** @var array $claims */
+    protected $claims = [];
 
     /**
      * Create a new authentication guard.
@@ -37,43 +43,41 @@ class Jwt implements Guard
      * @param UserProvider $provider
      * @param Request $request
      */
-    public function __construct(UserProvider $provider, Request $request)
+    public function __construct(UserProvider $provider = null, Request $request = null)
     {
         $this->provider = $provider;
         $this->request = $request;
 
         $this->jwtAuth = app(JwtAuthInterface::class);
 
-        $this->user = $this->retrieveUser();
+        $this->retrieveUserInfo();
     }
 
     /**
      * Retrieve user from jwt token in the request header
-     *
-     * @return Authenticatable|null
      */
-    private function retrieveUser()
+    private function retrieveUserInfo()
     {
-        $jwt = $this->getToken();
+        $this->token = $this->getToken();
 
-        if ($this->jwtAuth->isJwtValid($jwt) == false) {
+        if ($this->jwtAuth->isJwtValid($this->token) == false) {
             return null;
         }
 
-        $claims = $this->jwtAuth->retrieveClaimsFrom($jwt);
+        $this->claims = $this->jwtAuth->retrieveClaimsFrom($this->token);
 
-        $logoutTime = app('cache')->get($this->jwtAuth->getLogoutCacheKey($claims['sub']));
+        $logoutTime = app('cache')->get($this->jwtAuth->getLogoutCacheKey($this->claims['sub']));
 
-        if ($logoutTime && $logoutTime > $claims['exp']) {
+        if ($logoutTime && $logoutTime > $this->claims['exp']) {
             return null;
         }
 
-        $key = $this->jwtAuth->getUserCacheKey($claims['sub']);
+        $key = $this->jwtAuth->getUserCacheKey($this->claims['sub']);
 
         $ttl = app('config')->get('jwt.ttl') / 60;
 
-        return app('cache')->remember($key, $ttl, function () use ($jwt) {
-            $user = $this->jwtAuth->retrieveUserFrom($jwt);
+        $this->user = app('cache')->remember($key, $ttl, function () {
+            $user = $this->jwtAuth->retrieveUserFrom($this->token);
 
             $this->jwtAuth->runPostHooks($user);
 
@@ -88,10 +92,14 @@ class Jwt implements Guard
      */
     public function getToken()
     {
+        if ($this->token) {
+            return $this->token;
+        }
+
         $authorization = $this->request->header('Authorization');
 
         if ($authorization && starts_with($authorization, 'Bearer ')) {
-            return substr($authorization, strlen('Bearer '));
+            return $this->token = substr($authorization, strlen('Bearer '));
         }
 
         return null;
@@ -262,5 +270,26 @@ class Jwt implements Guard
             $this->jwtAuth->logout($this->user);
             $this->user = null;
         }
+    }
+
+    /**
+     * Get stored jwt claim
+     *
+     * @param string $key
+     * @return mixed|null
+     */
+    public function getClaim(string $key)
+    {
+        return isset($this->claims[$key]) ? $this->claims[$key] : null;
+    }
+
+    /**
+     * Get all claims
+     *
+     * @return array
+     */
+    public function getClaims(): array
+    {
+        return $this->claims;
     }
 }

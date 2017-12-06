@@ -1,6 +1,9 @@
 <?php
 
 use Faker\Factory as FakerFactory;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\UserProvider;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Str;
 use MiladRahimi\LaraJwt\Providers\ServiceProvider;
 
@@ -57,5 +60,45 @@ class LaraJwtTestCase extends \Orchestra\Testbench\TestCase
     protected function key(): string
     {
         return $_ENV['JWT_KEY'] ?? $_ENV['JWT_KEY'] = Str::random(32);
+    }
+
+    /**
+     * Generate a brand new user
+     *
+     * @return User
+     */
+    protected function generateUser(): User
+    {
+        $id = $this->faker->numberBetween(1, 1000);
+
+        $user = app(User::class);
+
+        $idFieldName = $user->getAuthIdentifierName();
+        $user->setAttribute($idFieldName, $id);
+
+        return $user;
+    }
+
+    /**
+     * Mock User Provider service
+     *
+     * @param Authenticatable $user
+     * @return Authenticatable
+     */
+    protected function mockUserProvider(Authenticatable $user): Authenticatable
+    {
+        $userProviderMock = Mockery::mock(UserProvider::class)
+            ->shouldReceive('retrieveById')->withArgs([$user->getAuthIdentifier()])
+            ->andReturn($user)
+            ->getMock();
+
+        $authMock = Mockery::mock('auth')
+            ->shouldReceive('getProvider')
+            ->andReturn($userProviderMock)
+            ->getMock();
+
+        $this->app['auth'] = $authMock;
+
+        return $user;
     }
 }

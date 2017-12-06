@@ -7,7 +7,6 @@
  */
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Foundation\Auth\User;
 use MiladRahimi\LaraJwt\Services\JwtAuthInterface;
 use MiladRahimi\LaraJwt\Services\JwtServiceInterface;
@@ -141,7 +140,7 @@ class JwtAuthTest extends LaraJwtTestCase
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
         $jwtAuth->registerPostHook(function (Authenticatable $u) {
-            throw new Exception();
+            throw new Exception($u);
         });
 
         $user = $this->generateUser();
@@ -184,45 +183,5 @@ class JwtAuthTest extends LaraJwtTestCase
         $this->assertLessThanOrEqual($time, $cached);
 
         $this->assertGreaterThanOrEqual(time(), $cached);
-    }
-
-    /**
-     * Mock User Provider service
-     *
-     * @param User $user
-     * @return User
-     */
-    private function mockUserProvider(User $user): User
-    {
-        $userProviderMock = Mockery::mock(UserProvider::class)
-            ->shouldReceive('retrieveById')->withArgs([$user->getAuthIdentifier()])
-            ->andReturn($user)
-            ->getMock();
-
-        $authMock = Mockery::mock('auth')
-            ->shouldReceive('getProvider')
-            ->andReturn($userProviderMock)
-            ->getMock();
-
-        $this->app['auth'] = $authMock;
-
-        return $user;
-    }
-
-    /**
-     * Generate a brand new user
-     *
-     * @return User
-     */
-    private function generateUser(): User
-    {
-        $id = $this->faker->numberBetween(1, 1000);
-
-        $user = app(User::class);
-
-        $idFieldName = $user->getAuthIdentifierName();
-        $user->setAttribute($idFieldName, $id);
-
-        return $user;
     }
 }

@@ -11,7 +11,7 @@ and providing JWT guard for Laravel applications.
 
 ### Installation
 
-Run the following command in your Laravel project root directory:
+Run the following command in your Laravel root directory:
 
 ```
 composer require miladrahimi/larajwt:2.*
@@ -33,13 +33,13 @@ php artisan vendor:publish --tag=larajwt-config
 
 ### Generate JWT from Users
 
-Use the method below to generate JWT from any authenticable entity (model):
+Use the method below to generate JWT from users or any other authenticable entities (models):
 
 ```
 $jwt = JwtAuth::generateTokenFrom($user);
 ```
 
-For example you may generate a JWT from user in sign in process like this:
+For example you may generate JWT from users in the sign in process like this:
 
 ```
 $credential = [
@@ -49,6 +49,7 @@ $credential = [
     
 if(Auth::guard('api')->attempt($credential)) {
     $user = Auth::guard('api')->user();
+    
     $jwt = JwtAuth::generateTokenFrom($user);
     
     // Return successfull sign in response with the generated jwt.
@@ -57,9 +58,17 @@ if(Auth::guard('api')->attempt($credential)) {
 }
 ```
 
+If you want to store more information like role in the token, you can pass them to the method this way:
+
+```
+$claims = ['role' => 'admin', 'foo' => 'bar'];
+
+$jwt = JwtAuth::generateTokenFrom($user, $claims);
+```
+
 ### Guards
 
-Add as many as JWT guard you need in your `config/auth.php` like this example:
+Add as many as guard you need in your `config/auth.php` with `jwt` driver like this example:
 
 ```
 'guards' => [
@@ -79,7 +88,7 @@ Add as many as JWT guard you need in your `config/auth.php` like this example:
 
 After configuring guards in `config/auth.php` you can protect routes by the defined guards.
 
-For the auth configuration demonstrated above you can protect routes this way:
+In our example we can protect route like this:
 
 ```
 Route::group(['middleware' => 'auth:api'], function () {
@@ -87,14 +96,27 @@ Route::group(['middleware' => 'auth:api'], function () {
 });
 ```
 
-Your clients must send header `Authorization: Bearer <jwt>` in their requests.
+* Your clients must send header `Authorization: Bearer <jwt>` in their requests.
 
 ### Authenticated User
 
-To retrieve current user in your application (controllers for example) you can do it this way:
+To retrieve current user and his info in your application (controllers for example) you can do it this way:
 
 ```
-$currentUser = Auth::guard('api')->user();
+// To get current user
+$user = Auth::guard('api')->user();
+
+// To get current user id
+$user = Auth::guard('api')->id();
+
+// To get current token
+$jwt = Auth::guard('api')->getToken();
+
+// To get current token claims
+$claims = Auth::guard('api')->getClaims();
+
+// To get a sepcific claim from current token
+$role = Auth::guard('api')->getClaim('role');
 ```
 
 Since LaraJwt caches user fetching it can authenticate users without touching database.
@@ -145,13 +167,13 @@ If you need to clear cache for a specific user you can use following method:
 JwtAuth::clearCache($user);
 ```
 
-You can pass user model (Authenticable) or its id the `clearCache` method.
+You can pass user model (Authenticable) or its id to the `clearCache` method.
 
 ### Post-hooks
 
 Post-hooks are closures which will be called after authentication.
 
-For example if you have considered boolean property `is_active` for users,
+For example if you have considered boolean property like `is_active` for users,
 you probably want to check its value after authentication and raise some exception if it is false.
 
 You can register hooks as many as you need, LaraJwt runs them after authentication.
@@ -179,9 +201,9 @@ class AuthServiceProvider extends ServiceProvider
 }
 ```
 
-The `registerPostHook` takes a closure with on argument for authenticated user.
+The `registerPostHook` takes a closure with one argument to get authenticated user.
 
-You may inject following code to the `render` method in `Laravel/app/Exceptions/Handler.php`:
+You may put following snippet to the `render` method in `Laravel/app/Exceptions/Handler.php`:
 
 ```
 public function render($request, Exception $exception)
