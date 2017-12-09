@@ -37,7 +37,7 @@ class JwtService implements JwtServiceInterface
     /**
      * @inheritdoc
      */
-    public function parse(string $jwt, string $key, ValidationData $validationData = null): array
+    public function parse(string $jwt = null, string $key, ValidationData $validationData = null): array
     {
         /** @var Parser $parser */
         $parser = app(Parser::class);

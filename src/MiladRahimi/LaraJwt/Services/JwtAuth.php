@@ -9,9 +9,10 @@
 namespace MiladRahimi\LaraJwt\Services;
 
 use Closure;
+use Exception;
+use Illuminate\Container\EntryNotFoundException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\UserProvider;
-use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 use MiladRahimi\LaraJwt\Exceptions\LaraJwtConfiguringException;
 
 class JwtAuth implements JwtAuthInterface
@@ -26,7 +27,11 @@ class JwtAuth implements JwtAuthInterface
      */
     public function __construct()
     {
-        if (empty(app('config')->get('jwt'))) {
+        try {
+            if (empty(app('config')->get('jwt'))) {
+                throw new LaraJwtConfiguringException('LaraJwt config not found.');
+            }
+        } catch (EntryNotFoundException $e) {
             throw new LaraJwtConfiguringException('LaraJwt config not found.');
         }
     }
@@ -60,7 +65,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable
+    public function retrieveUserFrom(string $jwt = null, $provider = null): Authenticatable
     {
         $claims = $this->retrieveClaimsFrom($jwt);
 
@@ -73,7 +78,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function retrieveClaimsFrom(string $jwt): array
+    public function retrieveClaimsFrom(string $jwt = null): array
     {
         /** @var JwtServiceInterface $jwtService */
         $jwtService = app(JwtServiceInterface::class);
@@ -84,13 +89,13 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function isJwtValid(string $jwt): bool
+    public function isJwtValid(string $jwt = null): bool
     {
         try {
             $claims = $this->retrieveClaimsFrom($jwt);
 
             return isset($claims['sub'], $claims['jti'], $claims['exp']);
-        } catch (InvalidJwtException $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -128,6 +133,18 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
+    public function getUserCacheKey($user)
+    {
+        if ($user instanceof Authenticatable) {
+            $user = $user->getAuthIdentifier();
+        }
+
+        return 'jwt:users:' . $user;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function logout($user)
     {
         if ($user instanceof Authenticatable) {
@@ -137,18 +154,6 @@ class JwtAuth implements JwtAuthInterface
         $ttl = app('config')->get('jwt.ttl') / 60;
 
         app('cache')->put($this->getLogoutCacheKey($user), time(), $ttl);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getUserCacheKey($user)
-    {
-        if ($user instanceof Authenticatable) {
-            $user = $user->getAuthIdentifier();
-        }
-
-        return 'jwt:users:' . $user;
     }
 
     /**

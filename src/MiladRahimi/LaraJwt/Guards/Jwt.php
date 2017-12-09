@@ -42,6 +42,7 @@ class Jwt implements Guard
      *
      * @param UserProvider $provider
      * @param Request $request
+     * @throws \Illuminate\Container\EntryNotFoundException
      */
     public function __construct(UserProvider $provider = null, Request $request = null)
     {
@@ -55,6 +56,7 @@ class Jwt implements Guard
 
     /**
      * Retrieve user from jwt token in the request header
+     * @throws \Illuminate\Container\EntryNotFoundException
      */
     private function retrieveUserInfo()
     {

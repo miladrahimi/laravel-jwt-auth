@@ -30,7 +30,7 @@ interface JwtAuthInterface
      * @param ServiceProvider|string $provider
      * @return Authenticatable
      */
-    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable;
+    public function retrieveUserFrom(string $jwt = null, $provider = null): Authenticatable;
 
     /**
      * Retrieve claims from given jwt
@@ -38,7 +38,7 @@ interface JwtAuthInterface
      * @param string $jwt
      * @return array
      */
-    public function retrieveClaimsFrom(string $jwt): array;
+    public function retrieveClaimsFrom(string $jwt = null): array;
 
     /**
      * Is given JWT valid?
@@ -46,7 +46,7 @@ interface JwtAuthInterface
      * @param string $jwt
      * @return bool
      */
-    public function isJwtValid(string $jwt): bool;
+    public function isJwtValid(string $jwt = null): bool;
 
     /**
      * Register new user validator to validate user
