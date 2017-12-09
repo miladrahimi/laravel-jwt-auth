@@ -65,7 +65,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function retrieveUserFrom(string $jwt = null, $provider = null): Authenticatable
+    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable
     {
         $claims = $this->retrieveClaimsFrom($jwt);
 
@@ -78,7 +78,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function retrieveClaimsFrom(string $jwt = null): array
+    public function retrieveClaimsFrom(string $jwt): array
     {
         /** @var JwtServiceInterface $jwtService */
         $jwtService = app(JwtServiceInterface::class);
@@ -89,7 +89,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function isJwtValid(string $jwt = null): bool
+    public function isJwtValid(string $jwt): bool
     {
         try {
             $claims = $this->retrieveClaimsFrom($jwt);

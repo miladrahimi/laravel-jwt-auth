@@ -62,7 +62,7 @@ class Jwt implements Guard
     {
         $this->token = $this->getToken();
 
-        if ($this->jwtAuth->isJwtValid($this->token) == false) {
+        if (is_null($this->token) || $this->jwtAuth->isJwtValid($this->token) == false) {
             return null;
         }
 

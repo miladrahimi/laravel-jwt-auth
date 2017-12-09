@@ -33,5 +33,5 @@ interface JwtServiceInterface
      * @return string[]
      * @throws InvalidJwtException
      */
-    public function parse(string $jwt = null, string $key, ValidationData $validationData = null): array;
+    public function parse(string $jwt, string $key, ValidationData $validationData = null): array;
 }
