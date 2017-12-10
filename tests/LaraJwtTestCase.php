@@ -1,8 +1,8 @@
 <?php
 
 use Faker\Factory as FakerFactory;
+use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Str;
 use MiladRahimi\LaraJwt\Providers\ServiceProvider;
@@ -87,17 +87,12 @@ class LaraJwtTestCase extends \Orchestra\Testbench\TestCase
      */
     protected function mockUserProvider(Authenticatable $user): Authenticatable
     {
-        $userProviderMock = Mockery::mock(UserProvider::class)
+        $userProviderMock = Mockery::mock(EloquentUserProvider::class)
             ->shouldReceive('retrieveById')->withArgs([$user->getAuthIdentifier()])
             ->andReturn($user)
             ->getMock();
 
-        $authMock = Mockery::mock('auth')
-            ->shouldReceive('getProvider')
-            ->andReturn($userProviderMock)
-            ->getMock();
-
-        $this->app['auth'] = $authMock;
+        $this->app[EloquentUserProvider::class] = $userProviderMock;
 
         return $user;
     }

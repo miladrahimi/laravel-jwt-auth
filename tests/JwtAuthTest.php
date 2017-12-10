@@ -52,6 +52,7 @@ class JwtAuthTest extends LaraJwtTestCase
      * @test
      * @depends it_should_generate_a_valid_token
      * @param array $info
+     * @throws \MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
      */
     public function it_should_retrieve_claims_from_jwt($info)
     {
@@ -166,6 +167,7 @@ class JwtAuthTest extends LaraJwtTestCase
 
     /**
      * @test
+     * @throws \Illuminate\Container\EntryNotFoundException
      */
     public function it_should_set_logout_user()
     {

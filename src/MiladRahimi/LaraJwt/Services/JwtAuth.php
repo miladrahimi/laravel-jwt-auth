@@ -10,9 +10,9 @@ namespace MiladRahimi\LaraJwt\Services;
 
 use Closure;
 use Exception;
+use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Container\EntryNotFoundException;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Contracts\Auth\UserProvider;
 use MiladRahimi\LaraJwt\Exceptions\LaraJwtConfiguringException;
 
 class JwtAuth implements JwtAuthInterface
@@ -59,6 +59,7 @@ class JwtAuth implements JwtAuthInterface
         }
 
         $jwtService = app(JwtServiceInterface::class);
+
         return $jwtService->generate($tokenClaims, app('config')->get('jwt.key'));
     }
 
@@ -69,8 +70,9 @@ class JwtAuth implements JwtAuthInterface
     {
         $claims = $this->retrieveClaimsFrom($jwt);
 
-        /** @var UserProvider $provider */
-        $provider = app('auth')->getProvider($provider);
+        if (is_null($provider)) {
+            $provider = app(EloquentUserProvider::class);
+        }
 
         return $provider->retrieveById(($claims['sub'] ?? null));
     }
@@ -89,8 +91,12 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function isJwtValid(string $jwt): bool
+    public function isJwtValid($jwt): bool
     {
+        if (empty($jwt)) {
+            return false;
+        }
+
         try {
             $claims = $this->retrieveClaimsFrom($jwt);
 
@@ -153,13 +159,13 @@ class JwtAuth implements JwtAuthInterface
 
         $ttl = app('config')->get('jwt.ttl') / 60;
 
-        app('cache')->put($this->getLogoutCacheKey($user), time(), $ttl);
+        app('cache')->put($this->getUserLogoutCacheKey($user), time(), $ttl);
     }
 
     /**
      * @inheritdoc
      */
-    public function getLogoutCacheKey($user)
+    public function getUserLogoutCacheKey($user)
     {
         if ($user instanceof Authenticatable) {
             $user = $user->getAuthIdentifier();

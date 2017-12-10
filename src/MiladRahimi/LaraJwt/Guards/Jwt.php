@@ -9,6 +9,7 @@
 namespace MiladRahimi\LaraJwt\Guards;
 
 use Illuminate\Auth\GuardHelpers;
+use Illuminate\Container\EntryNotFoundException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
@@ -42,7 +43,7 @@ class Jwt implements Guard
      *
      * @param UserProvider $provider
      * @param Request $request
-     * @throws \Illuminate\Container\EntryNotFoundException
+     * @throws EntryNotFoundException
      */
     public function __construct(UserProvider $provider = null, Request $request = null)
     {
@@ -56,35 +57,46 @@ class Jwt implements Guard
 
     /**
      * Retrieve user from jwt token in the request header
+     *
      * @throws \Illuminate\Container\EntryNotFoundException
      */
     private function retrieveUserInfo()
     {
-        $this->token = $this->getToken();
+        $this->retrieveToken();
 
-        if (is_null($this->token) || $this->jwtAuth->isJwtValid($this->token) == false) {
-            return null;
+        if ($this->jwtAuth->isJwtValid($this->getToken()) == false) {
+            return;
         }
 
-        $this->claims = $this->jwtAuth->retrieveClaimsFrom($this->token);
+        $this->claims = $this->jwtAuth->retrieveClaimsFrom($this->getToken());
 
-        $logoutTime = app('cache')->get($this->jwtAuth->getLogoutCacheKey($this->claims['sub']));
-
-        if ($logoutTime && $logoutTime > $this->claims['exp']) {
-            return null;
+        if ($this->isUserLoggedOut()) {
+            return;
         }
 
-        $key = $this->jwtAuth->getUserCacheKey($this->claims['sub']);
+        $key = $this->jwtAuth->getUserCacheKey($this->getClaim('sub'));
 
         $ttl = app('config')->get('jwt.ttl') / 60;
 
         $this->user = app('cache')->remember($key, $ttl, function () {
-            $user = $this->jwtAuth->retrieveUserFrom($this->token);
+            $user = $this->jwtAuth->retrieveUserFrom($this->getToken(), $this->getProvider());
 
             $this->jwtAuth->runPostHooks($user);
 
             return $user;
         });
+    }
+
+    /**
+     * Retrieve token from header
+     */
+    private function retrieveToken()
+    {
+        $authorization = $this->request->header('Authorization');
+
+        if ($authorization && starts_with($authorization, 'Bearer ')) {
+            $this->token = substr($authorization, strlen('Bearer '));
+        }
     }
 
     /**
@@ -94,17 +106,60 @@ class Jwt implements Guard
      */
     public function getToken()
     {
-        if ($this->token) {
-            return $this->token;
+        return $this->token;
+    }
+
+    /**
+     * Check if user is logged out
+     *
+     * @throws EntryNotFoundException
+     */
+    private function isUserLoggedOut()
+    {
+        $key = $this->jwtAuth->getUserLogoutCacheKey($this->getClaim('sub'));
+
+        $logoutTime = app('cache')->get($key);
+
+        if ($logoutTime && $logoutTime > $this->getClaim('exp')) {
+            return true;
         }
 
-        $authorization = $this->request->header('Authorization');
+        return false;
+    }
 
-        if ($authorization && starts_with($authorization, 'Bearer ')) {
-            return $this->token = substr($authorization, strlen('Bearer '));
-        }
+    /**
+     * Get stored jwt claim
+     *
+     * @param string $key
+     * @return mixed|null
+     */
+    public function getClaim(string $key)
+    {
+        return isset($this->claims[$key]) ? $this->claims[$key] : null;
+    }
 
-        return null;
+    /**
+     * Get the user provider used by the guard.
+     *
+     * @return UserProvider
+     */
+    public function getProvider()
+    {
+        return $this->provider;
+    }
+
+    /**
+     * Set the user provider used by the guard.
+     *
+     * @param UserProvider $provider
+     *
+     * @return $this
+     */
+    public function setProvider(UserProvider $provider)
+    {
+        $this->provider = $provider;
+
+        return $this;
     }
 
     /**
@@ -219,30 +274,6 @@ class Jwt implements Guard
     }
 
     /**
-     * Get the user provider used by the guard.
-     *
-     * @return UserProvider
-     */
-    public function getProvider()
-    {
-        return $this->provider;
-    }
-
-    /**
-     * Set the user provider used by the guard.
-     *
-     * @param UserProvider $provider
-     *
-     * @return $this
-     */
-    public function setProvider(UserProvider $provider)
-    {
-        $this->provider = $provider;
-
-        return $this;
-    }
-
-    /**
      * Return the currently cached user.
      *
      * @return Authenticatable|null
@@ -272,17 +303,6 @@ class Jwt implements Guard
             $this->jwtAuth->logout($this->user);
             $this->user = null;
         }
-    }
-
-    /**
-     * Get stored jwt claim
-     *
-     * @param string $key
-     * @return mixed|null
-     */
-    public function getClaim(string $key)
-    {
-        return isset($this->claims[$key]) ? $this->claims[$key] : null;
     }
 
     /**

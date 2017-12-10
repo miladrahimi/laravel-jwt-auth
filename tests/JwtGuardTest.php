@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use MiladRahimi\LaraJwt\Guards\Jwt;
@@ -44,7 +45,7 @@ class JwtGuardTest extends LaraJwtTestCase
             ->andReturn($jwt)
             ->getMock();
 
-        return new Jwt(null, $request);
+        return new Jwt($this->app[EloquentUserProvider::class], $request);
     }
 
     /**
