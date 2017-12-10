@@ -12,6 +12,7 @@ use Exception;
 use Lcobucci\JWT\Builder as JwtBuilder;
 use Lcobucci\JWT\Claim\EqualsTo;
 use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Token;
 use Lcobucci\JWT\ValidationData;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 
@@ -29,9 +30,7 @@ class JwtService implements JwtServiceInterface
             $jwtBuilder->set($name, $value);
         }
 
-        $jwt = $jwtBuilder->sign(app('larajwt.signer'), $key)->getToken();
-
-        return $jwt;
+        return $jwtBuilder->sign(app('larajwt.signer'), $key)->getToken();
     }
 
     /**
@@ -39,13 +38,9 @@ class JwtService implements JwtServiceInterface
      */
     public function parse(string $jwt, string $key, ValidationData $validationData = null): array
     {
-        /** @var Parser $parser */
-        $parser = app(Parser::class);
-
-        $algorithm = app('larajwt.signer');
-
         try {
-            $data = $parser->parse($jwt);
+            /** @var Token $data */
+            $data = app(Parser::class)->parse($jwt);
         } catch (Exception $e) {
             throw new InvalidJwtException($e->getMessage(), 0, $e);
         }
@@ -54,7 +49,7 @@ class JwtService implements JwtServiceInterface
             throw new InvalidJwtException('Jwt validation failed.');
         }
 
-        if ($data->verify($algorithm, $key) == false) {
+        if ($data->verify(app('larajwt.signer'), $key) == false) {
             throw new InvalidJwtException('Jwt verification failed.');
         }
 

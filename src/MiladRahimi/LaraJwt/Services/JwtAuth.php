@@ -27,6 +27,16 @@ class JwtAuth implements JwtAuthInterface
      */
     public function __construct()
     {
+        $this->checkConfiguration();
+    }
+
+    /**
+     * Check if coniguration file is set up or not
+     *
+     * @throws LaraJwtConfiguringException
+     */
+    private function checkConfiguration()
+    {
         try {
             if (empty(app('config')->get('jwt'))) {
                 throw new LaraJwtConfiguringException('LaraJwt config not found.');
@@ -39,36 +49,34 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function generateTokenFrom($user, array $claims = []): string
+    public function generateToken(Authenticatable $user, array $claims = []): string
     {
-        if ($user instanceof Authenticatable) {
-            $user = $user->getAuthIdentifier();
-        }
-
         $tokenClaims = [];
-        $tokenClaims['sub'] = $user;
+        $tokenClaims['sub'] = $user->getAuthIdentifier();;
         $tokenClaims['iss'] = app('config')->get('jwt.issuer');
         $tokenClaims['aud'] = app('config')->get('jwt.audience');
         $tokenClaims['exp'] = time() + intval(app('config')->get('jwt.ttl'));
         $tokenClaims['iat'] = time();
         $tokenClaims['nbf'] = time();
-        $tokenClaims['jti'] = uniqid('jwt');
+        $tokenClaims['jti'] = uniqid('larajwt');
 
         foreach ($claims as $name => $value) {
             $tokenClaims[$name] = $value;
         }
 
+        $key = app('config')->get('jwt.key');
+
         $jwtService = app(JwtServiceInterface::class);
 
-        return $jwtService->generate($tokenClaims, app('config')->get('jwt.key'));
+        return $jwtService->generate($tokenClaims, $key);
     }
 
     /**
      * @inheritdoc
      */
-    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable
+    public function retrieveUser(string $jwt, $provider = null): Authenticatable
     {
-        $claims = $this->retrieveClaimsFrom($jwt);
+        $claims = $this->retrieveClaims($jwt);
 
         if (is_null($provider)) {
             $provider = app(EloquentUserProvider::class);
@@ -80,7 +88,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function retrieveClaimsFrom(string $jwt): array
+    public function retrieveClaims(string $jwt): array
     {
         /** @var JwtServiceInterface $jwtService */
         $jwtService = app(JwtServiceInterface::class);
@@ -91,14 +99,14 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function isJwtValid($jwt): bool
+    public function isTokenValid($jwt): bool
     {
         if (empty($jwt)) {
             return false;
         }
 
         try {
-            $claims = $this->retrieveClaimsFrom($jwt);
+            $claims = $this->retrieveClaims($jwt);
 
             return isset($claims['sub'], $claims['jti'], $claims['exp']);
         } catch (Exception $e) {
@@ -117,7 +125,7 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function runPostHooks($user)
+    public function runPostHooks(Authenticatable $user)
     {
         foreach ($this->postHooks as $hook) {
             $hook($user);

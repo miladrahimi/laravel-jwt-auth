@@ -20,14 +20,8 @@ class Jwt implements Guard
 {
     use GuardHelpers;
 
-    /** @var UserProvider $provider */
-    protected $provider;
-
     /** @var Request $request */
     protected $request;
-
-    /** @var Authenticatable $user */
-    protected $user;
 
     /** @var string $token */
     protected $token;
@@ -52,7 +46,7 @@ class Jwt implements Guard
 
         $this->jwtAuth = app(JwtAuthInterface::class);
 
-        $this->retrieveUserInfo();
+        $this->retrieveUser();
     }
 
     /**
@@ -60,15 +54,15 @@ class Jwt implements Guard
      *
      * @throws \Illuminate\Container\EntryNotFoundException
      */
-    private function retrieveUserInfo()
+    private function retrieveUser()
     {
         $this->retrieveToken();
 
-        if ($this->jwtAuth->isJwtValid($this->getToken()) == false) {
+        if ($this->jwtAuth->isTokenValid($this->getToken()) == false) {
             return;
         }
 
-        $this->claims = $this->jwtAuth->retrieveClaimsFrom($this->getToken());
+        $this->claims = $this->jwtAuth->retrieveClaims($this->getToken());
 
         if ($this->isUserLoggedOut()) {
             return;
@@ -79,7 +73,7 @@ class Jwt implements Guard
         $ttl = app('config')->get('jwt.ttl') / 60;
 
         $this->user = app('cache')->remember($key, $ttl, function () {
-            $user = $this->jwtAuth->retrieveUserFrom($this->getToken(), $this->getProvider());
+            $user = $this->jwtAuth->retrieveUser($this->getToken(), $this->getProvider());
 
             $this->jwtAuth->runPostHooks($user);
 
@@ -136,50 +130,6 @@ class Jwt implements Guard
     public function getClaim(string $key)
     {
         return isset($this->claims[$key]) ? $this->claims[$key] : null;
-    }
-
-    /**
-     * Get the user provider used by the guard.
-     *
-     * @return UserProvider
-     */
-    public function getProvider()
-    {
-        return $this->provider;
-    }
-
-    /**
-     * Set the user provider used by the guard.
-     *
-     * @param UserProvider $provider
-     *
-     * @return $this
-     */
-    public function setProvider(UserProvider $provider)
-    {
-        $this->provider = $provider;
-
-        return $this;
-    }
-
-    /**
-     * Determine if the current user is a guest.
-     *
-     * @return bool
-     */
-    public function guest()
-    {
-        return is_null($this->user);
-    }
-
-    /**
-     * Get the ID for the currently authenticated user.
-     *
-     * @return int|null
-     */
-    public function id()
-    {
-        return $this->user ? $this->user->getAuthIdentifier() : null;
     }
 
     /**
@@ -250,16 +200,6 @@ class Jwt implements Guard
     }
 
     /**
-     * Determine if the current user is authenticated.
-     *
-     * @return bool
-     */
-    public function check()
-    {
-        return !is_null($this->user);
-    }
-
-    /**
      * Set the current request instance.
      *
      * @param Request $request
@@ -281,17 +221,6 @@ class Jwt implements Guard
     public function getUser()
     {
         return $this->user();
-    }
-
-    /**
-     * Set the current user.
-     *
-     * @param  Authenticatable $user
-     * @return void
-     */
-    public function setUser(Authenticatable $user)
-    {
-        $this->user = $user;
     }
 
     /**

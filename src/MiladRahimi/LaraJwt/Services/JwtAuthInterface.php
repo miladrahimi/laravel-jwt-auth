@@ -16,13 +16,13 @@ use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 interface JwtAuthInterface
 {
     /**
-     * Generate JWT from user model or id
+     * Generate JWT from authenticable model or id
      *
-     * @param Authenticatable|int $user
+     * @param Authenticatable $user
      * @param array $claims
      * @return string
      */
-    public function generateTokenFrom($user, array $claims = []): string;
+    public function generateToken(Authenticatable $user, array $claims = []): string;
 
     /**
      * Retrieve user from given jwt and by given user provider
@@ -31,7 +31,7 @@ interface JwtAuthInterface
      * @param ServiceProvider|string $provider
      * @return Authenticatable
      */
-    public function retrieveUserFrom(string $jwt, $provider = null): Authenticatable;
+    public function retrieveUser(string $jwt, $provider = null): Authenticatable;
 
     /**
      * Retrieve claims from given jwt
@@ -39,15 +39,15 @@ interface JwtAuthInterface
      * @param string $jwt
      * @return array
      */
-    public function retrieveClaimsFrom(string $jwt): array;
+    public function retrieveClaims(string $jwt): array;
 
     /**
-     * Is given JWT valid?
+     * Is given token valid?
      *
      * @param string|null $jwt
      * @return bool
      */
-    public function isJwtValid($jwt): bool;
+    public function isTokenValid($jwt): bool;
 
     /**
      * Register new user validator to validate user
@@ -59,9 +59,9 @@ interface JwtAuthInterface
     /**
      * Run registered post-hooks
      *
-     * @param Authenticatable|int $user
+     * @param Authenticatable $user
      */
-    public function runPostHooks($user);
+    public function runPostHooks(Authenticatable $user);
 
     /**
      * Clear JWT cache

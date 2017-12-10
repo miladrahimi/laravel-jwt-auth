@@ -36,7 +36,7 @@ class JwtGuardTest extends LaraJwtTestCase
     {
         $this->mockUserProvider($this->user);
 
-        $this->token = app(JwtAuthInterface::class)->generateTokenFrom($this->user, $claims);
+        $this->token = app(JwtAuthInterface::class)->generateToken($this->user, $claims);
         $jwt = 'Bearer ' . $this->token;
 
         $request = Mockery::mock(Request::class)->makePartial();

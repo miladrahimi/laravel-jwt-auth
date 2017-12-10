@@ -24,7 +24,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $jwt = $jwtAuth->generateTokenFrom($user);
+        $jwt = $jwtAuth->generateToken($user);
 
         $this->assertNotNull($jwt);
 
@@ -43,7 +43,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $parsedUser = $jwtAuth->retrieveUserFrom($info['jwt']);
+        $parsedUser = $jwtAuth->retrieveUser($info['jwt']);
 
         $this->assertEquals($user->getAuthIdentifier(), $parsedUser->getAuthIdentifier());
     }
@@ -62,7 +62,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $claims = $jwtAuth->retrieveClaimsFrom($info['jwt']);
+        $claims = $jwtAuth->retrieveClaims($info['jwt']);
 
         $this->assertEquals($user->getAuthIdentifier(), $claims['sub']);
         $this->assertEquals($this->app['config']->get('jwt.issuer'), $claims['iss']);
@@ -79,7 +79,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $this->assertEquals(true, $jwtAuth->isJwtValid($info['jwt']));
+        $this->assertEquals(true, $jwtAuth->isTokenValid($info['jwt']));
     }
 
     /**
@@ -92,7 +92,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $this->assertEquals(false, $jwtAuth->isJwtValid($jwt));
+        $this->assertEquals(false, $jwtAuth->isTokenValid($jwt));
     }
 
     /**
@@ -109,7 +109,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $this->assertEquals(false, $jwtAuth->isJwtValid($jwt));
+        $this->assertEquals(false, $jwtAuth->isTokenValid($jwt));
     }
 
     /**
@@ -162,7 +162,7 @@ class JwtAuthTest extends LaraJwtTestCase
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $this->assertEquals(false, $jwtAuth->isJwtValid($jwt));
+        $this->assertEquals(false, $jwtAuth->isTokenValid($jwt));
     }
 
     /**

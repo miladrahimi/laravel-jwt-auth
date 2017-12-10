@@ -36,7 +36,7 @@ php artisan vendor:publish --tag=larajwt-config
 Use the method below to generate JWT from users or any other authenticable entities (models):
 
 ```
-$jwt = JwtAuth::generateTokenFrom($user);
+$jwt = JwtAuth::generateToken($user);
 ```
 
 For example you may generate JWT from users in the sign in process like this:
@@ -50,7 +50,7 @@ $credential = [
 if(Auth::guard('api')->attempt($credential)) {
     $user = Auth::guard('api')->user();
     
-    $jwt = JwtAuth::generateTokenFrom($user);
+    $jwt = JwtAuth::generateToken($user);
     
     // Return successfull sign in response with the generated jwt.
 } else {
@@ -63,7 +63,7 @@ If you want to store more information like role in the token, you can pass them 
 ```
 $claims = ['role' => 'admin', 'foo' => 'bar'];
 
-$jwt = JwtAuth::generateTokenFrom($user, $claims);
+$jwt = JwtAuth::generateToken($user, $claims);
 ```
 
 ### Guards
@@ -126,7 +126,7 @@ Since LaraJwt caches user fetching it can authenticate users without touching da
 You may need to retrieve user from generated JWTs manually, no worry! just do it this way:
 
 ```
-$user = JwtAuth::retrieveUserFrom($jwt);
+$user = JwtAuth::retrieveUser($jwt);
 
 ```
 
@@ -134,7 +134,7 @@ It uses default user provider to fetch the user,
 if you are using different provider you can pass it to the method as the second parameter like this:
 
 ```
-$admin = JwtAuth::retrieveUserFrom($jwt, 'admin');
+$admin = JwtAuth::retrieveUser($jwt, 'admin');
 ```
 
 ### Retrieve JWT Claims Manually
@@ -142,7 +142,7 @@ $admin = JwtAuth::retrieveUserFrom($jwt, 'admin');
 You my even go further and need to retrieve JWT claims manually, it has considered too.
 
 ```
-$claims = JwtAuth::retrieveClaimsFrom($jwt);
+$claims = JwtAuth::retrieveClaims($jwt);
 ```
 
 The mentioned method returns associative array of claims with following structure:
