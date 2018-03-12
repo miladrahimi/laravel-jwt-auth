@@ -9,7 +9,6 @@
 namespace MiladRahimi\LaraJwt\Guards;
 
 use Illuminate\Auth\GuardHelpers;
-use Illuminate\Container\EntryNotFoundException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
@@ -33,11 +32,7 @@ class Jwt implements Guard
     protected $claims = [];
 
     /**
-     * Create a new authentication guard.
-     *
-     * @param UserProvider $provider
-     * @param Request $request
-     * @throws EntryNotFoundException
+     * @inheritdoc
      */
     public function __construct(UserProvider $provider = null, Request $request = null)
     {
@@ -64,10 +59,6 @@ class Jwt implements Guard
 
         $this->claims = $this->jwtAuth->retrieveClaims($this->getToken());
 
-        if ($this->isUserLoggedOut()) {
-            return;
-        }
-
         $key = $this->jwtAuth->getUserCacheKey($this->getClaim('sub'));
 
         $ttl = app('config')->get('jwt.ttl') / 60;
@@ -75,9 +66,7 @@ class Jwt implements Guard
         $this->user = app('cache')->remember($key, $ttl, function () {
             $user = $this->jwtAuth->retrieveUser($this->getToken(), $this->getProvider());
 
-            $this->jwtAuth->runPostHooks($user);
-
-            return $user;
+            return $this->jwtAuth->runPostHooks($user);
         });
     }
 
@@ -101,24 +90,6 @@ class Jwt implements Guard
     public function getToken()
     {
         return $this->token;
-    }
-
-    /**
-     * Check if user is logged out
-     *
-     * @throws EntryNotFoundException
-     */
-    private function isUserLoggedOut()
-    {
-        $key = $this->jwtAuth->getUserLogoutCacheKey($this->getClaim('sub'));
-
-        $logoutTime = app('cache')->get($key);
-
-        if ($logoutTime && $logoutTime > $this->getClaim('exp')) {
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -229,7 +200,7 @@ class Jwt implements Guard
     public function logout()
     {
         if ($this->user) {
-            $this->jwtAuth->logout($this->user);
+            $this->jwtAuth->clearCache($this->user);
             $this->user = null;
         }
     }

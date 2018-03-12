@@ -167,23 +167,36 @@ class JwtAuthTest extends LaraJwtTestCase
 
     /**
      * @test
-     * @throws \Illuminate\Container\EntryNotFoundException
      */
-    public function it_should_set_logout_user()
+    public function it_should_return_the_original_user_when_there_is_no_post_hook()
     {
+        $originalUser = $this->generateUser();
+
         /** @var JwtAuthInterface $jwtAuth */
         $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $user = $this->generateUser();
+        $user = $jwtAuth->runPostHooks($originalUser);
 
-        $time = time();
+        $this->assertSame($user, $originalUser);
+    }
 
-        $jwtAuth->logout($user);
+    /**
+     * @test
+     */
+    public function it_should_edit_user_when_there_is_an_editor_post_hook()
+    {
+        $originalUser = $this->generateUser();
 
-        $cached = app('cache')->get("jwt:users:{$user->getAuthIdentifier()}:logout");
+        /** @var JwtAuthInterface $jwtAuth */
+        $jwtAuth = $this->app[JwtAuthInterface::class];
 
-        $this->assertLessThanOrEqual($time, $cached);
+        $jwtAuth->registerPostHook(function ($u) {
+            $u->id = 666;
+            return $u;
+        });
 
-        $this->assertGreaterThanOrEqual(time(), $cached);
+        $user = $jwtAuth->runPostHooks($originalUser);
+
+        $this->assertEquals(666, $user->getAuthIdentifier());
     }
 }

@@ -66,6 +66,7 @@ class JwtAuth implements JwtAuthInterface
 
         $key = app('config')->get('jwt.key');
 
+        /** @var JwtServiceInterface $jwtService */
         $jwtService = app(JwtServiceInterface::class);
 
         return $jwtService->generate($tokenClaims, $key);
@@ -128,8 +129,14 @@ class JwtAuth implements JwtAuthInterface
     public function runPostHooks(Authenticatable $user)
     {
         foreach ($this->postHooks as $hook) {
-            $hook($user);
+            if ($user != null) {
+                $user = $hook($user);
+            } else {
+                return null;
+            }
         }
+
+        return $user;
     }
 
     /**
@@ -154,31 +161,5 @@ class JwtAuth implements JwtAuthInterface
         }
 
         return 'jwt:users:' . $user;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function logout($user)
-    {
-        if ($user instanceof Authenticatable) {
-            $user = $user->getAuthIdentifier();
-        }
-
-        $ttl = app('config')->get('jwt.ttl') / 60;
-
-        app('cache')->put($this->getUserLogoutCacheKey($user), time(), $ttl);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getUserLogoutCacheKey($user)
-    {
-        if ($user instanceof Authenticatable) {
-            $user = $user->getAuthIdentifier();
-        }
-
-        return "jwt:users:$user:logout";
     }
 }

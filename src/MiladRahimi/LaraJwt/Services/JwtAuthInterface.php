@@ -30,6 +30,7 @@ interface JwtAuthInterface
      * @param string $jwt
      * @param ServiceProvider|string $provider
      * @return Authenticatable
+     * @throws InvalidJwtException
      */
     public function retrieveUser(string $jwt, $provider = null): Authenticatable;
 
@@ -60,6 +61,7 @@ interface JwtAuthInterface
      * Run registered post-hooks
      *
      * @param Authenticatable $user
+     * @return Authenticatable|null
      */
     public function runPostHooks(Authenticatable $user);
 
@@ -71,25 +73,10 @@ interface JwtAuthInterface
     public function clearCache($user);
 
     /**
-     * Logout user
-     *
-     * @param Authenticatable|int $user
-     */
-    public function logout($user);
-
-    /**
      * Get cache key LaraJwt uses to cache tokens
      *
      * @param Authenticatable|int $user
      * @return string|null
      */
     public function getUserCacheKey($user);
-
-    /**
-     * Get cache key LaraJwt uses to cache user logout times
-     *
-     * @param Authenticatable|int $user
-     * @return string|null
-     */
-    public function getUserLogoutCacheKey($user);
 }

@@ -75,7 +75,7 @@ class JwtGuardTest extends LaraJwtTestCase
     /**
      * @test
      */
-    public function it_should_the_user_id()
+    public function it_should_return_the_user_id()
     {
         $this->assertEquals($this->user->getAuthIdentifier(), $this->guard->id());
     }
