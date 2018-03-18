@@ -31,13 +31,9 @@
   },
   "autoload": {
     "psr-4": {
-      "MiladRahimi\\": "src/MiladRahimi/"
+      "MiladRahimi\\LaraJwt\\": "src/MiladRahimi/LaraJwt/",
+      "MiladRahimi\\LaraJwtTests\\": "tests/"
     }
-  },
-  "autoload-dev": {
-    "classmap": [
-      "tests/LaraJwtTestCase.php"
-    ]
   },
   "require-dev": {
     "mockery/mockery": "~1.0",

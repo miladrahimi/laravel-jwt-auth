@@ -1,11 +1,15 @@
 <?php
 
+namespace MiladRahimi\LaraJwtTests;
+
 use Faker\Factory as FakerFactory;
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Str;
 use MiladRahimi\LaraJwt\Providers\ServiceProvider;
+use Mockery;
+use Orchestra\Testbench\TestCase;
 
 /**
  * Created by PhpStorm.
@@ -13,7 +17,7 @@ use MiladRahimi\LaraJwt\Providers\ServiceProvider;
  * Date: 9/20/17
  * Time: 12:55
  */
-class LaraJwtTestCase extends \Orchestra\Testbench\TestCase
+class LaraJwtTestCase extends TestCase
 {
     /**
      * @var \Faker\Generator $faker
@@ -50,6 +54,7 @@ class LaraJwtTestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('jwt.ttl', 60 * 60 * 24 * 30);
         $app['config']->set('jwt.issuer', 'The Issuer');
         $app['config']->set('jwt.audience', 'The Audience');
+        $app['config']->set('jwt.model_safe', false);
     }
 
     /**

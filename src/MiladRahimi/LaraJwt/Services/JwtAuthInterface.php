@@ -10,31 +10,32 @@ namespace MiladRahimi\LaraJwt\Services;
 
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Contracts\Auth\UserProvider;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 
 interface JwtAuthInterface
 {
     /**
-     * Generate JWT from authenticable model or id
+     * Generate JWT from authenticable model and custom claims
      *
      * @param Authenticatable $user
-     * @param array $claims
+     * @param array $customClaims
      * @return string
      */
-    public function generateToken(Authenticatable $user, array $claims = []): string;
+    public function generateToken(Authenticatable $user, array $customClaims = []): string;
 
     /**
-     * Retrieve user from given jwt and by given user provider
+     * Retrieve user from given jwt via appropriate given user provider
      *
      * @param string $jwt
-     * @param ServiceProvider|string $provider
-     * @return Authenticatable
+     * @param UserProvider $provider
+     * @return Authenticatable|null
      */
-    public function retrieveUser(string $jwt, $provider = null): Authenticatable;
+    public function retrieveUser(string $jwt, UserProvider $provider = null);
 
     /**
      * Retrieve claims from given jwt
+     * (This method does not support filters and advanced validations)
      *
      * @param string $jwt
      * @return array
@@ -42,26 +43,19 @@ interface JwtAuthInterface
     public function retrieveClaims(string $jwt): array;
 
     /**
-     * Is given token valid?
+     * Is given JWT valid?
      *
-     * @param string|null $jwt
+     * @param string $jwt
      * @return bool
      */
-    public function isTokenValid($jwt): bool;
+    public function isJwtValid(string $jwt): bool;
 
     /**
-     * Register new user validator to validate user
+     * Register new filter
      *
      * @param Closure $hook
      */
-    public function registerPostHook(Closure $hook);
-
-    /**
-     * Run registered post-hooks
-     *
-     * @param Authenticatable $user
-     */
-    public function runPostHooks(Authenticatable $user);
+    public function registerFilter(Closure $hook);
 
     /**
      * Clear JWT cache
@@ -71,25 +65,9 @@ interface JwtAuthInterface
     public function clearCache($user);
 
     /**
-     * Logout user
+     * Invalidate jwt by its jti
      *
-     * @param Authenticatable|int $user
+     * @param string $jti
      */
-    public function logout($user);
-
-    /**
-     * Get cache key LaraJwt uses to cache tokens
-     *
-     * @param Authenticatable|int $user
-     * @return string|null
-     */
-    public function getUserCacheKey($user);
-
-    /**
-     * Get cache key LaraJwt uses to cache user logout times
-     *
-     * @param Authenticatable|int $user
-     * @return string|null
-     */
-    public function getUserLogoutCacheKey($user);
+    public function invalidate(string $jti);
 }

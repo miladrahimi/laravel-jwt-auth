@@ -11,14 +11,59 @@ namespace MiladRahimi\LaraJwt\Services;
 use Closure;
 use Exception;
 use Illuminate\Auth\EloquentUserProvider;
-use Illuminate\Container\EntryNotFoundException;
+use Illuminate\Cache\CacheManager;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\UserProvider;
+use Lcobucci\JWT\ValidationData;
 use MiladRahimi\LaraJwt\Exceptions\LaraJwtConfiguringException;
+use Illuminate\Config\Repository as Config;
 
 class JwtAuth implements JwtAuthInterface
 {
-    /** @var Closure[] $postHooks */
-    private $postHooks = [];
+    /**
+     * @var Closure[]
+     */
+    private $filters = [];
+
+    /**
+     * @var string
+     */
+    private $key;
+
+    /**
+     * @var int
+     */
+    private $ttl;
+
+    /**
+     * @var string
+     */
+    private $issuer;
+
+    /**
+     * @var string
+     */
+    private $audience;
+
+    /**
+     * @var bool
+     */
+    private $isModelSafe;
+
+    /**
+     * @var CacheManager
+     */
+    private $cache;
+
+    /**
+     * @var Config
+     */
+    private $config;
+
+    /**
+     * @var JwtServiceInterface
+     */
+    private $service;
 
     /**
      * JwtAuth constructor.
@@ -27,62 +72,88 @@ class JwtAuth implements JwtAuthInterface
      */
     public function __construct()
     {
-        $this->checkConfiguration();
+        $this->cache = app('cache');
+        $this->config = app('config');
+        $this->service = app(JwtServiceInterface::class);
+        $this->configure();
     }
 
     /**
-     * Check if coniguration file is set up or not
+     * Check if configuration file is set up or not
      *
      * @throws LaraJwtConfiguringException
      */
-    private function checkConfiguration()
+    private function configure()
     {
-        try {
-            if (empty(app('config')->get('jwt'))) {
-                throw new LaraJwtConfiguringException('LaraJwt config not found.');
-            }
-        } catch (EntryNotFoundException $e) {
+        if (empty($this->config->get('jwt')) || empty($this->config->get('jwt.key'))) {
             throw new LaraJwtConfiguringException('LaraJwt config not found.');
         }
+
+        $this->key = $this->config->get('jwt.key');
+        $this->ttl = $this->config->get('jwt.ttl', 60 * 60 * 24 * 30);
+        $this->issuer = $this->config->get('jwt.issuer', 'Issuer');
+        $this->audience = $this->config->get('jwt.audience', 'Audience');
+        $this->isModelSafe = $this->config->get('jwt.model_safe', false);
     }
 
     /**
      * @inheritdoc
      */
-    public function generateToken(Authenticatable $user, array $claims = []): string
+    public function generateToken(Authenticatable $user, array $customClaims = []): string
     {
         $tokenClaims = [];
         $tokenClaims['sub'] = $user->getAuthIdentifier();;
-        $tokenClaims['iss'] = app('config')->get('jwt.issuer');
-        $tokenClaims['aud'] = app('config')->get('jwt.audience');
-        $tokenClaims['exp'] = time() + intval(app('config')->get('jwt.ttl'));
+        $tokenClaims['iss'] = $this->issuer;
+        $tokenClaims['aud'] = $this->audience;
+        $tokenClaims['exp'] = time() + $this->ttl;
         $tokenClaims['iat'] = time();
         $tokenClaims['nbf'] = time();
-        $tokenClaims['jti'] = uniqid('larajwt');
+        $tokenClaims['jti'] = uniqid();
 
-        foreach ($claims as $name => $value) {
+        foreach ($customClaims as $name => $value) {
             $tokenClaims[$name] = $value;
         }
 
-        $key = app('config')->get('jwt.key');
+        if ($this->isModelSafe) {
+            $tokenClaims['model'] = get_class($user);
+        }
 
-        $jwtService = app(JwtServiceInterface::class);
-
-        return $jwtService->generate($tokenClaims, $key);
+        return $this->service->generate($tokenClaims, $this->key);
     }
 
     /**
      * @inheritdoc
      */
-    public function retrieveUser(string $jwt, $provider = null): Authenticatable
+    public function retrieveUser(string $jwt, UserProvider $provider = null)
     {
         $claims = $this->retrieveClaims($jwt);
+
+        if (empty($claims)) {
+            return null;
+        }
 
         if (is_null($provider)) {
             $provider = app(EloquentUserProvider::class);
         }
 
-        return $provider->retrieveById(($claims['sub'] ?? null));
+        $key = $this->getUserCacheKey($claims['sub']);
+        $ttl = $this->ttl / 60;
+
+        return $this->cache->remember($key, $ttl, function () use ($claims, $provider) {
+            $user = $provider->retrieveById($claims['sub']);
+
+            if ($user == null) {
+                return null;
+            }
+
+            if ($this->isModelSafe) {
+                if (empty($claims['model']) || get_class($user) != $claims['model']) {
+                    return null;
+                }
+            }
+
+            return $this->applyFilters($user);
+        });
     }
 
     /**
@@ -90,25 +161,34 @@ class JwtAuth implements JwtAuthInterface
      */
     public function retrieveClaims(string $jwt): array
     {
-        /** @var JwtServiceInterface $jwtService */
-        $jwtService = app(JwtServiceInterface::class);
+        if ($this->isJwtValid($jwt) == false) {
+            return [];
+        }
 
-        return $jwtService->parse($jwt, app('config')->get('jwt.key'));
+        return $this->service->parse($jwt, $this->key);
     }
 
     /**
      * @inheritdoc
      */
-    public function isTokenValid($jwt): bool
+    public function isJwtValid(string $jwt): bool
     {
-        if (empty($jwt)) {
-            return false;
-        }
-
         try {
-            $claims = $this->retrieveClaims($jwt);
+            $validator = new ValidationData();
+            $validator->setIssuer($this->issuer);
+            $validator->setAudience($this->audience);
 
-            return isset($claims['sub'], $claims['jti'], $claims['exp']);
+            $claims = $this->service->parse($jwt, $this->key, $validator);
+
+            if (isset($claims['sub'], $claims['jti'], $claims['exp']) == false) {
+                return false;
+            }
+
+            if ($this->isTokenInvalidated($claims['jti'])) {
+                return false;
+            }
+
+            return true;
         } catch (Exception $e) {
             return false;
         }
@@ -117,19 +197,29 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function registerPostHook(Closure $hook)
+    public function registerFilter(Closure $hook)
     {
-        $this->postHooks[] = $hook;
+        $this->filters[] = $hook;
     }
 
     /**
      * @inheritdoc
      */
-    public function runPostHooks(Authenticatable $user)
+    private function applyFilters(Authenticatable $user)
     {
-        foreach ($this->postHooks as $hook) {
-            $hook($user);
+        if (empty($this->filters)) {
+            return $user;
         }
+
+        foreach ($this->filters as $hook) {
+            $user = $hook($user);
+
+            if ($user == null) {
+                return null;
+            }
+        }
+
+        return $user;
     }
 
     /**
@@ -141,13 +231,14 @@ class JwtAuth implements JwtAuthInterface
             $user = $user->getAuthIdentifier();
         }
 
-        app('cache')->forget($this->getUserCacheKey($user));
+        $this->cache->forget($this->getUserCacheKey($user));
     }
 
     /**
-     * @inheritdoc
+     * @param $user
+     * @return string
      */
-    public function getUserCacheKey($user)
+    private function getUserCacheKey($user)
     {
         if ($user instanceof Authenticatable) {
             $user = $user->getAuthIdentifier();
@@ -159,26 +250,28 @@ class JwtAuth implements JwtAuthInterface
     /**
      * @inheritdoc
      */
-    public function logout($user)
+    public function invalidate(string $jti)
     {
-        if ($user instanceof Authenticatable) {
-            $user = $user->getAuthIdentifier();
-        }
-
-        $ttl = app('config')->get('jwt.ttl') / 60;
-
-        app('cache')->put($this->getUserLogoutCacheKey($user), time(), $ttl);
+        $this->cache->put($this->getTokenInvalidationCacheKey($jti), time(), $this->ttl / 60);
     }
 
     /**
-     * @inheritdoc
+     * @param string $jti
+     * @return string
      */
-    public function getUserLogoutCacheKey($user)
+    private function getTokenInvalidationCacheKey(string $jti)
     {
-        if ($user instanceof Authenticatable) {
-            $user = $user->getAuthIdentifier();
-        }
+        return "jwt:invalidated:$jti";
+    }
 
-        return "jwt:users:$user:logout";
+    /**
+     * Check if token is invalidated
+     *
+     * @param string $jti
+     * @return bool
+     */
+    private function isTokenInvalidated(string $jti): bool
+    {
+        return $this->cache->get($this->getTokenInvalidationCacheKey($jti)) ?: false;
     }
 }

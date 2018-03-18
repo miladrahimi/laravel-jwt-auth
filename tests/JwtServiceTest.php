@@ -1,4 +1,7 @@
 <?php
+
+namespace MiladRahimi\LaraJwtTests;
+
 /**
  * Created by PhpStorm.
  * User: Milad Rahimi <info@miladrahimi.com>
@@ -53,7 +56,7 @@ class JwtServiceTest extends LaraJwtTestCase
 
     /**
      * @test
-     * @expectedException MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
+     * @expectedException \MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
      */
     public function it_should_raise_an_error_when_token_is_expired()
     {
@@ -70,7 +73,7 @@ class JwtServiceTest extends LaraJwtTestCase
 
     /**
      * @test
-     * @expectedException MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
+     * @expectedException \MiladRahimi\LaraJwt\Exceptions\InvalidJwtException
      */
     public function it_should_raise_an_error_when_token_is_not_valid()
     {

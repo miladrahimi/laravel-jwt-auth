@@ -9,7 +9,6 @@
 namespace MiladRahimi\LaraJwt\Guards;
 
 use Illuminate\Auth\GuardHelpers;
-use Illuminate\Container\EntryNotFoundException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
@@ -37,7 +36,6 @@ class Jwt implements Guard
      *
      * @param UserProvider $provider
      * @param Request $request
-     * @throws EntryNotFoundException
      */
     public function __construct(UserProvider $provider = null, Request $request = null)
     {
@@ -51,34 +49,15 @@ class Jwt implements Guard
 
     /**
      * Retrieve user from jwt token in the request header
-     *
-     * @throws \Illuminate\Container\EntryNotFoundException
      */
     private function retrieveUser()
     {
         $this->retrieveToken();
 
-        if ($this->jwtAuth->isTokenValid($this->getToken()) == false) {
-            return;
+        if ($this->getToken()) {
+            $this->claims = $this->jwtAuth->retrieveClaims($this->getToken());
+            $this->user = $this->jwtAuth->retrieveUser($this->getToken());
         }
-
-        $this->claims = $this->jwtAuth->retrieveClaims($this->getToken());
-
-        if ($this->isUserLoggedOut()) {
-            return;
-        }
-
-        $key = $this->jwtAuth->getUserCacheKey($this->getClaim('sub'));
-
-        $ttl = app('config')->get('jwt.ttl') / 60;
-
-        $this->user = app('cache')->remember($key, $ttl, function () {
-            $user = $this->jwtAuth->retrieveUser($this->getToken(), $this->getProvider());
-
-            $this->jwtAuth->runPostHooks($user);
-
-            return $user;
-        });
     }
 
     /**
@@ -101,35 +80,6 @@ class Jwt implements Guard
     public function getToken()
     {
         return $this->token;
-    }
-
-    /**
-     * Check if user is logged out
-     *
-     * @throws EntryNotFoundException
-     */
-    private function isUserLoggedOut()
-    {
-        $key = $this->jwtAuth->getUserLogoutCacheKey($this->getClaim('sub'));
-
-        $logoutTime = app('cache')->get($key);
-
-        if ($logoutTime && $logoutTime > $this->getClaim('exp')) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Get stored jwt claim
-     *
-     * @param string $key
-     * @return mixed|null
-     */
-    public function getClaim(string $key)
-    {
-        return isset($this->claims[$key]) ? $this->claims[$key] : null;
     }
 
     /**
@@ -224,13 +174,20 @@ class Jwt implements Guard
     }
 
     /**
-     * Logout current user (Invalidate his/her JWT)
+     * Logout current user (And invalidate his/her JWT)
+     *
+     * @param bool $invalidateToken
      */
-    public function logout()
+    public function logout(bool $invalidateToken = true)
     {
-        if ($this->user) {
-            $this->jwtAuth->logout($this->user);
+        if ($this->user()) {
+            if ($invalidateToken) {
+                $this->jwtAuth->invalidate($this->getClaims()['jti']);
+            }
+
+            $this->jwtAuth->clearCache($this->user());
             $this->user = null;
+            $this->token = null;
         }
     }
 
@@ -242,5 +199,16 @@ class Jwt implements Guard
     public function getClaims(): array
     {
         return $this->claims;
+    }
+
+    /**
+     * Get a specific claim
+     *
+     * @param string $name
+     * @return mixed|null
+     */
+    public function getClaim(string $name)
+    {
+        return $this->claims[$name] ?? null;
     }
 }

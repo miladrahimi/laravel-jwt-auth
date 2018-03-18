@@ -20,4 +20,8 @@ return [
     // Token audience (your api customer)
     'audience' => env('JWT_AUDIENCE', ''),
 
+    // Set true if you have multiple authentication for multiple models
+    // It ensures that token for a model won't be valid for another models
+    'model_safe' => false,
+
 ];

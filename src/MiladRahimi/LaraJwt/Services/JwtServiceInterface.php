@@ -24,14 +24,13 @@ interface JwtServiceInterface
     public function generate(array $claims, string $key): string;
 
     /**
-     * Parse and validate jwt and extract claims
+     * Parse (and validate) jwt to extract claims
      *
      * @param string $jwt
      * @param string $key
      * @param ValidationData|null $validationData
      *
      * @return string[]
-     * @throws InvalidJwtException
      */
     public function parse(string $jwt, string $key, ValidationData $validationData = null): array;
 }

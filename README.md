@@ -5,13 +5,12 @@ Laravel JWT guard and authentication tools
 
 ### Overview
 
-LaraJwt is a Laravel package for
-generating JWT (JSON Web-based Token) from users
-and providing JWT guard for Laravel applications.
+LaraJwt is a Laravel package for generating JWT (JSON Web-based Token) from users and providing JWT guard for Laravel 
+applications.
 
 ### Installation
 
-Run the following command in your Laravel root directory:
+Add the package via Composer:
 
 ```
 composer require miladrahimi/larajwt:2.*
@@ -25,11 +24,20 @@ php artisan vendor:publish --tag=larajwt-config
 
 #### Notes on Installation
 
-* Edit `config/jwt.php` based on your requirements and environment.
-
 * The package service provider will be automatically discovered by Laravel package discovery.
 
 * The `JwtAuth` alias for `MiladRahimi\LaraJwt\Facades\JwtAuth` will be automatically registered.
+
+### Configuration
+
+To configure the package open `jwt.php` file in your laravel config directory. This files consists of following items:
+
+* `key`: The secret key to sign the token, it uses your project key if you leave it empty.
+* `ttl`: Time that token will be valid, token will be expired after this time (in seconds)
+* `issuer`: Issuer claim
+* `audience`: Audience claim
+* `model_safe`: Set it true if you have different authentication for different models with LaraJwt, it ensures that
+    token belongs to related model defined in guard.
 
 ### Generate JWT from Users
 
@@ -39,7 +47,7 @@ Use the method below to generate JWT from users or any other authenticable entit
 $jwt = JwtAuth::generateToken($user);
 ```
 
-For example you may generate JWT from users in the sign in process like this:
+For example you may generate JWT from users in the sign-in process like this:
 
 ```
 $credential = [
@@ -61,9 +69,9 @@ if(Auth::guard('api')->attempt($credential)) {
 If you want to store more information like role in the token, you can pass them to the method this way:
 
 ```
-$claims = ['role' => 'admin', 'foo' => 'bar'];
+$customClaims = ['role' => 'admin', 'foo' => 'bar'];
 
-$jwt = JwtAuth::generateToken($user, $claims);
+$jwt = JwtAuth::generateToken($user, $customClaims);
 ```
 
 ### Guards
@@ -105,9 +113,13 @@ To retrieve current user and his info in your application (controllers for examp
 ```
 // To get current user
 $user = Auth::guard('api')->user();
+$user = Auth::guard('api')->getUser();
 
 // To get current user id
 $user = Auth::guard('api')->id();
+
+// Is current user guest
+$user = Auth::guard('api')->guest();
 
 // To get current token
 $jwt = Auth::guard('api')->getToken();
@@ -117,6 +129,13 @@ $claims = Auth::guard('api')->getClaims();
 
 // To get a sepcific claim from current token
 $role = Auth::guard('api')->getClaim('role');
+
+// Logout current user (JWT will be cached in blacklist and NOT valid in next requests).
+Auth::guard('api')->logout();
+
+// Logout current user (but it will be VALID next reuqests).
+// It clears caches so user will be fetched and filters will be executed again in next request.
+Auth::guard('api')->logout(false);
 ```
 
 Since LaraJwt caches user fetching it can authenticate users without touching database.
@@ -158,25 +177,25 @@ The mentioned method returns associative array of claims with following structur
 
 ### Cache
 
-LaraJwt caches JWTs in default,
-so after first authentication it remembers token as long as ttl which is set in config.
-
-If you need to clear cache for a specific user you can use following method:
+LaraJwt caches retrieving users process , so after first successful authentication it remembers jwt as long as ttl 
+which is set in config, you may clear this cache to force LaraJwt to re-run filters or re-fetch user model from 
+database, to do so you can use the this method:
 
 ```
 JwtAuth::clearCache($user);
 ```
 
-You can pass user model (Authenticable) or its id to the `clearCache` method.
+You can pass user model (Authenticable) or its primary key to the `clearCache` method.
 
-### Post-hooks
+### Filters
 
-Post-hooks are closures which will be called after authentication.
+Filters are runnable closures which will be called after parsing token and fetching user model.
 
 For example if you have considered boolean property like `is_active` for users,
-you probably want to check its value after authentication and raise some exception if it is false.
+you probably want to check its value after authentication and raise some exception if it is false or change LaraJwt 
+normal process the way it be seemed authentication is failed.
 
-You can register hooks as many as you need, LaraJwt runs them after authentication.
+You can register filters as many as you need, LaraJwt runs them one by one after authentication.
 
 AuthServiceProvider seems a good place to register hooks.
 
@@ -192,28 +211,35 @@ class AuthServiceProvider extends ServiceProvider
         $jwtAuth = $this->app->make(JwtAuthInterface::class);
         
         // Check if user is active or not
-        $jwtAuth->registerPostHook(function (User $user) {
-            if ($user->is_active == false) {
-                throw new UserIsNotActiveException();
+        $jwtAuth->registerFilter(function (User $user) {
+            if ($user->is_active == true) {
+                return $user;
+            } else {
+                return null;
             }
         });
     }
 }
 ```
 
-The `registerPostHook` takes a closure with one argument to get authenticated user.
+The `registerFilter` takes a closure with one argument to get authenticated user and it should return the user if there
+is no problem, it can return null if you want make the authentication failed.
 
-You may put following snippet to the `render` method in `Laravel/app/Exceptions/Handler.php`:
+### Logout and JWT Invalidation
+
+As mentioned with example above you can logout user with following method:
 
 ```
-public function render($request, Exception $exception)
-{
-    if ($exception instanceof UserIsNotActiveException) {
-        return response()->json(['error' => 'You are not active...'], 403);
-    }
-    
-    // ...
-}
+Auth::guard('api')->logout();
+```
+
+It takes one boolean parameter that is true in default and put the jwt in cached blacklist so the token won't be valid
+in next requests, but you can pass false to make it only logout current user and clear cache.
+
+You can also invalidate tokens with `JwtAuth` facade and `jti` claim this way:
+
+```
+JwtAuth::invalidate($jti);
 ```
 
 ### Exceptions

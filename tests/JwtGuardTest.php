@@ -1,10 +1,14 @@
 <?php
 
+namespace MiladRahimi\LaraJwtTests;
+
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use MiladRahimi\LaraJwt\Guards\Jwt;
 use MiladRahimi\LaraJwt\Services\JwtAuthInterface;
+use MiladRahimi\LaraJwtTests\Classes\Person;
+use Mockery;
 
 /**
  * Created by PhpStorm.
@@ -48,46 +52,107 @@ class JwtGuardTest extends LaraJwtTestCase
         return new Jwt($this->app[EloquentUserProvider::class], $request);
     }
 
-    /**
-     * @test
-     */
-    public function it_should_return_a_token()
+    private function createVirginGuard()
     {
-        $this->assertSame($this->token, $this->guard->getToken());
+        $this->mockUserProvider($this->user);
+
+        $request = Mockery::mock(Request::class)->makePartial();
+        $request->shouldReceive('header')
+            ->withArgs(['Authorization'])
+            ->andReturn('')
+            ->getMock();
+
+        return new Jwt($this->app[EloquentUserProvider::class], $request);
     }
 
-    /**
-     * @test
-     */
-    public function it_should_return_the_user()
+    public function test_get_token_method_it_should_return_the_token()
+    {
+        $this->assertEquals($this->token, $this->guard->getToken());
+    }
+
+    public function test_get_token_method_it_should_return_null_when_there_is_no_user()
+    {
+        $this->assertNull($this->createVirginGuard()->getToken());
+    }
+
+    public function test_login_and_user_and_get_user_methods_it_should_set_user()
+    {
+        $person = new Person();
+        $guard = $this->createVirginGuard();
+        $guard->login($person);
+
+        $this->assertSame($guard->getUser(), $person);
+        $this->assertSame($guard->user(), $person);
+    }
+
+    public function test_user_method_it_should_return_the_user()
     {
         $this->assertTrue($this->guard->user() instanceof Authenticatable);
     }
 
-    /**
-     * @test
-     */
-    public function is_should_not_be_guest()
+    public function test_guest_method_is_should_return_false_when_user_is_available()
     {
         $this->assertFalse($this->guard->guest());
     }
 
-    /**
-     * @test
-     */
-    public function it_should_the_user_id()
+    public function test_id_method_it_should_return_the_user_id()
     {
         $this->assertEquals($this->user->getAuthIdentifier(), $this->guard->id());
     }
 
-    /**
-     * @test
-     */
-    public function it_should_return_stored_claims()
+    public function test_logout_it_should_unset_user_from_guard()
     {
-        $guard = $this->createJwtGuard(['name' => 'Milad', 'surname' => 'Rahimi']);
+        $guard = $this->createJwtGuard();
+        $guard->logout(false);
 
-        $this->assertEquals('Milad', $guard->getClaim('name'));
-        $this->assertEquals('Rahimi', $guard->getClaim('surname'));
+        $this->assertNull($guard->user());
+        $this->assertNull($guard->getUser());
+        $this->assertNull($guard->getToken());
+    }
+
+    public function test_logout_it_should_unset_user_from_guard_and_invalidate_jwt()
+    {
+        /** @var JwtAuthInterface $auth */
+        $auth = $this->app[JwtAuthInterface::class];
+
+        $guard = $this->createJwtGuard();
+        $jwt = $guard->getToken();
+
+        $this->assertNotNull($guard->user(), $auth->retrieveUser($jwt, $guard->getProvider()));
+
+        $guard->logout(true);
+
+        $this->assertNull($guard->user());
+        $this->assertNull($auth->retrieveUser($jwt, $guard->getProvider()));
+    }
+
+    public function test_get_claims_it_should_return_empty_array_when_user_is_not_set()
+    {
+        $guard = $this->createVirginGuard();
+        $this->assertEmpty($guard->getClaims());
+    }
+
+    public function test_get_claims_it_should_return_claim_array_when_user_is_set()
+    {
+        $claims = $this->createJwtGuard()->getClaims();
+        $this->assertNotEmpty($claims);
+    }
+
+    public function test_get_claim_method_it_should_return_null_when_user_is_not_set()
+    {
+        $guard = $this->createVirginGuard();
+        $this->assertNull($guard->getClaim('sub'));
+    }
+
+    public function test_get_claim_method_it_should_return_null_when_claim_is_not_in_token()
+    {
+        $guard = $this->createJwtGuard();
+        $this->assertNull($guard->getClaim('sth'));
+    }
+
+    public function test_get_claim_method_it_should_return_claim()
+    {
+        $guard = $this->createJwtGuard();
+        $this->assertEquals($guard->user()->getAuthIdentifier(), $guard->getClaim('sub'));
     }
 }

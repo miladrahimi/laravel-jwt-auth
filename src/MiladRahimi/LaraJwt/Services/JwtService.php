@@ -12,6 +12,7 @@ use Exception;
 use Lcobucci\JWT\Builder as JwtBuilder;
 use Lcobucci\JWT\Claim\EqualsTo;
 use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Signer\BaseSigner;
 use Lcobucci\JWT\Token;
 use Lcobucci\JWT\ValidationData;
 use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
@@ -19,18 +20,42 @@ use MiladRahimi\LaraJwt\Exceptions\InvalidJwtException;
 class JwtService implements JwtServiceInterface
 {
     /**
+     * @var JwtBuilder
+     */
+    private $builder;
+
+    /**
+     * @var Parser
+     */
+    private $parser;
+
+    /**
+     * @var BaseSigner
+     */
+    private $signer;
+
+    /**
+     * JwtService constructor.
+     */
+    public function __construct()
+    {
+        $this->builder = app(JwtBuilder::class);
+        $this->parser = app(Parser::class);
+        $this->signer = app('larajwt.signer');
+    }
+
+    /**
      * @inheritdoc
      */
-    public function generate(array $claims, string $key): string
+    public function generate(array $claims = [], string $key): string
     {
-        /** @var JwtBuilder $jwtBuilder */
-        $jwtBuilder = app(JwtBuilder::class);
+        $this->builder->unsign();
 
         foreach ($claims as $name => $value) {
-            $jwtBuilder->set($name, $value);
+            $this->builder->set($name, $value);
         }
 
-        return $jwtBuilder->sign(app('larajwt.signer'), $key)->getToken();
+        return $this->builder->sign($this->signer, $key)->getToken();
     }
 
     /**
@@ -40,7 +65,7 @@ class JwtService implements JwtServiceInterface
     {
         try {
             /** @var Token $data */
-            $data = app(Parser::class)->parse($jwt);
+            $data = $this->parser->parse($jwt);
         } catch (Exception $e) {
             throw new InvalidJwtException($e->getMessage(), 0, $e);
         }
