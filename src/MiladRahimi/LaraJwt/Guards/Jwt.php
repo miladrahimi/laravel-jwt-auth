@@ -56,7 +56,7 @@ class Jwt implements Guard
 
         if ($this->getToken()) {
             $this->claims = $this->jwtAuth->retrieveClaims($this->getToken());
-            $this->user = $this->jwtAuth->retrieveUser($this->getToken());
+            $this->user = $this->jwtAuth->retrieveUser($this->getToken(), $this->getProvider());
         }
     }
 
