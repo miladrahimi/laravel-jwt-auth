@@ -3,6 +3,7 @@ Laravel JWT guard and authentication tools
 
 > This package is no longer maintained.
 > You can use the [laravel/passport](https://github.com/laravel/passport) package instead.
+> Or you may use [miladrahimi/php-jwt](https://github.com/miladrahimi/php-jwt) to create your custom jwt guard.
 
 ## Documentation
 
